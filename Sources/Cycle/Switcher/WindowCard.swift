@@ -1,8 +1,8 @@
 import SwiftUI
 
-/// One window: its thumbnail with the app icon and title below. When selected it sits on
-/// the sliding highlight plate with a blue ring; window controls float on the thumbnail
-/// while it's selected or under the pointer.
+/// One window: a header row (controls, app icon, title) over its preview, which is
+/// centred in the space below. When selected it sits on the sliding highlight plate with
+/// a ring on the preview.
 struct WindowCard: View {
 	let window: SwitcherWindow
 	let image: NSImage?
@@ -22,21 +22,15 @@ struct WindowCard: View {
 
 	var body: some View {
 		VStack(spacing: Theme.Card.labelGap) {
+			WindowCardHeader(
+				window: window, isActive: isSelected || isHovering, isSelected: isSelected,
+				onAction: perform)
+				.frame(width: slot.width, height: Theme.Card.labelHeight)
 			WindowThumbnail(window: window, image: image, size: thumbSize, isSelected: isSelected)
-				// A narrow (portrait or small) preview centres the controls along its top.
-				.overlay(alignment: thumbSize.width < Theme.Controls.capsuleWidth + 16 ? .top : .topLeading) {
-					if !window.isWindowless && (isSelected || isHovering) {
-						WindowControls(onAction: perform)
-							.padding(8)
-							.transition(.opacity)
-					}
-				}
 				.frame(width: slot.width, height: slot.height)
-			WindowCardLabel(window: window, isSelected: isSelected)
-				.frame(width: slot.width, height: Theme.Card.labelHeight, alignment: .top)
 		}
 		.padding([.horizontal, .top], Theme.Card.inset)
-		.padding(.bottom, Theme.Card.inset / 2)
+		.padding(.bottom, Theme.Card.inset)
 		.frame(width: cardSize.width, height: cardSize.height, alignment: .top)
 		.background {
 			if isSelected {

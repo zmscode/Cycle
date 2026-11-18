@@ -20,26 +20,26 @@ struct GroupWindowTile: View {
 
 	var body: some View {
 		VStack(spacing: Theme.Card.labelGap) {
-			WindowThumbnail(window: window, image: image, size: thumb, isSelected: isSelected)
-				// A narrow (portrait or small) preview centres the controls along its top.
-				.overlay(alignment: thumb.width < Theme.Controls.capsuleWidth + 16 ? .top : .topLeading) {
-					if !window.isWindowless && (isSelected || isHovering) {
-						WindowControls(onAction: perform)
-							.padding(6)
-							.transition(.opacity)
-					}
+			// The app's icon and name are in the group header; each tile's row has the
+			// window's controls and title, aligned across every tile.
+			HStack(spacing: 8) {
+				if !window.isWindowless {
+					WindowControls(isActive: isSelected || isHovering, onAction: perform)
 				}
+				Text(window.isWindowless ? "Open App" : window.displayTitle)
+					.font(.caption)
+					.bold(isSelected)
+					.foregroundStyle(isSelected ? .primary : .secondary)
+					.lineLimit(1)
+					.truncationMode(.middle)
+				Spacer(minLength: 0)
+			}
+			.frame(width: slot.width, height: Theme.Group.labelHeight)
+			WindowThumbnail(window: window, image: image, size: thumb, isSelected: isSelected)
 				.frame(width: slot.width, height: slot.height)
-			Text(window.isWindowless ? "Open App" : window.displayTitle)
-				.font(.caption)
-				.bold(isSelected)
-				.foregroundStyle(isSelected ? .primary : .secondary)
-				.lineLimit(1)
-				.truncationMode(.middle)
-				.frame(width: slot.width, height: Theme.Group.labelHeight)
 		}
 		.padding([.horizontal, .top], Theme.Card.inset)
-		.padding(.bottom, Theme.Card.inset / 2)
+		.padding(.bottom, Theme.Card.inset)
 		.background {
 			if isSelected {
 				SelectionPlate(cornerRadius: Theme.Card.plateRadius)

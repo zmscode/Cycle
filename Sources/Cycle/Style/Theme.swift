@@ -32,7 +32,8 @@ enum Theme {
 		static let minScale: CGFloat = 0.55
 		static let windowlessScale: CGFloat = 0.7
 		/// A card is never narrower than this, so its label stays readable.
-		static let minSlotWidth: CGFloat = 120
+		/// Wide enough for the header row: controls, icon and a readable name.
+		static let minSlotWidth: CGFloat = 236
 		static let maxThumbHeight: CGFloat = 150
 		static let minThumbHeight: CGFloat = 96
 		static let iconSize: CGFloat = 18
@@ -58,7 +59,7 @@ enum Theme {
 		static let headerGap: CGFloat = 4
 		static let iconSize: CGFloat = 40
 		static let tileSpacing: CGFloat = 4
-		static let labelHeight: CGFloat = 18
+		static let labelHeight: CGFloat = 22
 		static let maxThumbHeight: CGFloat = 120
 		static let minThumbHeight: CGFloat = 80
 		static let minWidth: CGFloat = 200
@@ -73,9 +74,6 @@ enum Theme {
 	}
 
 	enum Controls {
-		/// The capsule's width; previews narrower than this centre it instead of pinning it
-		/// to the top-left corner.
-		static let capsuleWidth: CGFloat = 104
 		static let diameter: CGFloat = 12
 		static let spacing: CGFloat = 6
 	}

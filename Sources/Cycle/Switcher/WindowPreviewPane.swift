@@ -12,16 +12,13 @@ struct WindowPreviewPane: View {
 	var body: some View {
 		VStack(alignment: .leading, spacing: 14) {
 			if let window {
+				if !window.isWindowless {
+					WindowControls(isActive: true, onAction: perform)
+				}
 				WindowThumbnail(
 					window: window, image: image,
 					size: SwitcherLayout.fit(aspect: SwitcherLayout.aspect(of: window), in: previewBox),
 					isSelected: false)
-					.overlay(alignment: .topLeading) {
-						if !window.isWindowless {
-							WindowControls(onAction: perform)
-								.padding(8)
-						}
-					}
 				VStack(alignment: .leading, spacing: 4) {
 					Text(window.displayTitle)
 						.font(.title3.bold())

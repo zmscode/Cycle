@@ -65,7 +65,7 @@ struct SwitcherLayout {
 	}
 
 	var cardHeight: CGFloat {
-		Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Card.labelHeight + Theme.Card.inset / 2
+		Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Card.labelHeight + Theme.Card.inset
 	}
 
 	// MARK: Preview sizes
@@ -126,7 +126,7 @@ struct SwitcherLayout {
 		let widest = rows.map { rowWidth($0.map { cardWidths[$0] }, spacing: spacing) }.max() ?? 0
 		let width = max(widest + padding * 2, Theme.Panel.minWidth)
 		let cardHeight = Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Card.labelHeight
-			+ Theme.Card.inset / 2
+			+ Theme.Card.inset
 		var height = CGFloat(rows.count) * cardHeight + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
 		if scrolls { height = min(height, maxBody.height) }
 		return SwitcherLayout(
@@ -197,7 +197,7 @@ struct SwitcherLayout {
 	var groupHeight: CGFloat {
 		Theme.Group.padding + Theme.Group.headerHeight + Theme.Group.headerGap
 			+ Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Group.labelHeight
-			+ Theme.Card.inset / 2 + Theme.Group.padding
+			+ Theme.Card.inset + Theme.Group.padding
 	}
 
 	private static func groupWidth(_ group: WindowGroup, slots: [CGFloat]) -> CGFloat {
@@ -217,7 +217,7 @@ struct SwitcherLayout {
 		let width = max(widest + padding * 2, Theme.Panel.minWidth)
 		let groupHeight = Theme.Group.padding + Theme.Group.headerHeight + Theme.Group.headerGap
 			+ Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Group.labelHeight
-			+ Theme.Card.inset / 2 + Theme.Group.padding
+			+ Theme.Card.inset + Theme.Group.padding
 		var height = CGFloat(rows.count) * groupHeight + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
 		if scrolls { height = min(height, maxBody.height) }
 		return SwitcherLayout(
