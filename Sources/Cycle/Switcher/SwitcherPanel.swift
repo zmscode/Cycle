@@ -24,6 +24,12 @@ final class SwitcherPanel {
 		panel.orderFrontRegardless()
 	}
 
+	/// The panel's frame on screen, for placing the settings panel under its gear.
+	var frame: CGRect? { panel?.isVisible == true ? panel?.frame : nil }
+
+	/// The top row's height in the current layout.
+	private(set) var headerHeight: CGFloat = Theme.Panel.searchHeight
+
 	func hide() {
 		panel?.orderOut(nil)
 	}
@@ -34,10 +40,12 @@ final class SwitcherPanel {
 		let screen = Self.screenUnderPointer()
 		let visible = screen.visibleFrame
 		let metrics = SwitcherLayout.metrics(
-			for: state.windows.count,
-			maxSize: CGSize(width: visible.width * 0.9, height: visible.height * 0.8))
+			for: state.windows, style: Settings.layout,
+			maxSize: CGSize(width: visible.width * 0.9, height: visible.height * 0.8),
+			showsSearchBar: Settings.showSearchBar || state.isSearching)
 		host.rootView = SwitcherView(state: state, controller: controller, metrics: metrics)
-		let size = metrics.panelSize
+		headerHeight = metrics.headerHeight
+		let size = metrics.fullSize
 		panel.setFrame(
 			CGRect(
 				x: visible.midX - size.width / 2, y: visible.midY - size.height / 2,

@@ -14,6 +14,14 @@ enum InitializerModifier: String, CaseIterable {
 		}
 	}
 
+	var name: String {
+		switch self {
+		case .command: "Command"
+		case .option: "Option"
+		case .control: "Control"
+		}
+	}
+
 	var symbol: String {
 		switch self {
 		case .command: "⌘"
@@ -54,6 +62,12 @@ enum Key {
 enum Settings {
 	private static let defaults = UserDefaults.standard
 
+	/// A stored Bool, or `fallback` when unset. `bool(forKey:)` also reads "YES"/"NO"
+	/// passed as `-key value` launch arguments, which arrive as strings.
+	private static func flag(_ key: String, default fallback: Bool) -> Bool {
+		defaults.object(forKey: key) == nil ? fallback : defaults.bool(forKey: key)
+	}
+
 	static var modifier: InitializerModifier {
 		get {
 			InitializerModifier(
@@ -75,13 +89,31 @@ enum Settings {
 		set { defaults.set(newValue, forKey: "windowSwitcherCurrentSpaceOnly") }
 	}
 
+	/// The switcher layout. `layoutOverride` (set by `--demo`) wins for this run only.
+	static var layout: SwitcherStyle {
+		get {
+			layoutOverride
+				?? SwitcherStyle(rawValue: defaults.string(forKey: "windowSwitcherLayout") ?? "") ?? .grouped
+		}
+		set { defaults.set(newValue.rawValue, forKey: "windowSwitcherLayout") }
+	}
+
+	nonisolated(unsafe) static var layoutOverride: SwitcherStyle?
+
+	/// The search bar along the top of the switcher. Off leaves a slim row with just the
+	/// settings button; `,` still opens search.
+	static var showSearchBar: Bool {
+		get { flag("windowSwitcherSearchEnabled", default: true) }
+		set { defaults.set(newValue, forKey: "windowSwitcherSearchEnabled") }
+	}
+
 	static var showWindowlessApps: Bool {
-		get { defaults.object(forKey: "windowSwitcherShowWindowlessApps") as? Bool ?? true }
+		get { flag("windowSwitcherShowWindowlessApps", default: false) }
 		set { defaults.set(newValue, forKey: "windowSwitcherShowWindowlessApps") }
 	}
 
 	static var includeHiddenWindows: Bool {
-		get { defaults.object(forKey: "windowSwitcherIncludeHiddenWindows") as? Bool ?? true }
+		get { flag("windowSwitcherIncludeHiddenWindows", default: true) }
 		set { defaults.set(newValue, forKey: "windowSwitcherIncludeHiddenWindows") }
 	}
 

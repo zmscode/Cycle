@@ -9,7 +9,22 @@ import ApplicationServices
 ///    subrole filtering and the AX element used to raise / close.
 /// 3. `CGSCopySpacesForWindows` to tell windows on other Spaces apart.
 enum WindowEnumerator {
+	/// Unsorted windows plus their window-server z-order, safe to build off the main thread.
+	struct Snapshot: @unchecked Sendable {
+		let windows: [SwitcherWindow]
+		let zOrder: [CGWindowID: Int]
+	}
+
+	/// Sorted most recent first. Main thread only: the MRU order lives there.
+	@MainActor
 	static func snapshot(order: MRUTracker, includeWindowless: Bool) -> [SwitcherWindow] {
+		let snapshot = collect(includeWindowless: includeWindowless)
+		return order.sort(snapshot.windows, zOrder: snapshot.zOrder)
+	}
+
+	/// Reads the window server and each app's AX windows. Takes tens of milliseconds, or
+	/// up to the AX timeout when an app hangs, so sessions call it on a background queue.
+	nonisolated static func collect(includeWindowless: Bool) -> Snapshot {
 		let ownPID = ProcessInfo.processInfo.processIdentifier
 		let apps = NSWorkspace.shared.runningApplications.filter {
 			$0.activationPolicy == .regular && $0.processIdentifier != ownPID && !$0.isTerminated
@@ -114,7 +129,7 @@ enum WindowEnumerator {
 			}
 		}
 
-		return order.sort(windows, zOrder: zOrder)
+		return Snapshot(windows: windows, zOrder: zOrder)
 	}
 
 	private static func bounds(_ entry: [String: Any]) -> CGRect? {

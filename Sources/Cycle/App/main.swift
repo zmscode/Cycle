@@ -67,7 +67,7 @@ enum Diagnostics {
 		let ids = windows.filter { !$0.isWindowless }.map(\.id)
 		var captured = 0
 		let captureStart = Date()
-		cache.capture(ids, best: false) { _, _ in captured += 1 }
+		cache.capture(ids, best: false, maxAge: 0) { _, _ in captured += 1 }
 		let deadline = Date().addingTimeInterval(3)
 		while captured < ids.count, Date() < deadline {
 			RunLoop.main.run(until: Date().addingTimeInterval(0.02))

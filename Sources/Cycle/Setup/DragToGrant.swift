@@ -13,11 +13,15 @@ struct SystemSettingsWindow {
 	let frame: CGRect
 
 	static func find() -> SystemSettingsWindow? {
-		guard let settings = NSRunningApplication.runningApplications(
-			withBundleIdentifier: "com.apple.systempreferences"
-		).first else { return nil }
-		let info = (CGWindowListCopyWindowInfo([.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
-			as? [[String: Any]]) ?? []
+		guard
+			let settings = NSRunningApplication.runningApplications(
+				withBundleIdentifier: "com.apple.systempreferences"
+			).first
+		else { return nil }
+		let info =
+			(CGWindowListCopyWindowInfo(
+				[.optionOnScreenOnly, .excludeDesktopElements], kCGNullWindowID)
+				as? [[String: Any]]) ?? []
 		let primaryHeight = NSScreen.screens.first?.frame.height ?? 0
 		let candidates = info.compactMap { entry -> SystemSettingsWindow? in
 			guard entry[kCGWindowOwnerPID as String] as? pid_t == settings.processIdentifier,
@@ -27,7 +31,8 @@ struct SystemSettingsWindow {
 				let cg = CGRect(dictionaryRepresentation: dict as CFDictionary),
 				cg.width > 300, cg.height > 300
 			else { return nil }
-			let frame = CGRect(x: cg.minX, y: primaryHeight - cg.maxY, width: cg.width, height: cg.height)
+			let frame = CGRect(
+				x: cg.minX, y: primaryHeight - cg.maxY, width: cg.width, height: cg.height)
 			return SystemSettingsWindow(windowNumber: id, frame: frame)
 		}
 		// Front-to-back order: the first is the one the user sees.
@@ -102,10 +107,14 @@ final class DropGuide {
 			let hole = target.frame.offsetBy(dx: -screen.frame.minX, dy: -screen.frame.minY)
 			let showsCaption = screen.frame.intersects(target.frame)
 			panel.contentView = NSHostingView(
-				rootView: SpotlightView(hole: hole, size: screen.frame.size, showsCaption: showsCaption))
+				rootView: SpotlightView(
+					hole: hole, size: screen.frame.size, showsCaption: showsCaption))
 			panel.alphaValue = 0
 			panel.orderFrontRegardless()
-			NSAnimationContext.runAnimationGroup { $0.duration = 0.18; panel.animator().alphaValue = 1 }
+			NSAnimationContext.runAnimationGroup {
+				$0.duration = 0.18
+				panel.animator().alphaValue = 1
+			}
 			panels.append(panel)
 		}
 	}
@@ -113,7 +122,10 @@ final class DropGuide {
 	func hide() {
 		let old = panels
 		panels = []
-		NSAnimationContext.runAnimationGroup({ $0.duration = 0.18; old.forEach { $0.animator().alphaValue = 0 } }) {
+		NSAnimationContext.runAnimationGroup({
+			$0.duration = 0.18
+			old.forEach { $0.animator().alphaValue = 0 }
+		}) {
 			old.forEach { $0.orderOut(nil) }
 		}
 	}
@@ -139,8 +151,8 @@ private struct SpotlightView: View {
 						.offset(x: holeTopLeft.minX, y: holeTopLeft.minY)
 				}
 			shape
-				.strokeBorder(Color.accentColor, lineWidth: 4)
-				.shadow(color: .accentColor.opacity(0.8), radius: 16)
+				.strokeBorder(Theme.Colors.selection, lineWidth: 4)
+				.shadow(color: Theme.Colors.selection.opacity(0.8), radius: 16)
 				.frame(width: holeTopLeft.width, height: holeTopLeft.height)
 				.offset(x: holeTopLeft.minX, y: holeTopLeft.minY)
 			if showsCaption {
@@ -159,8 +171,8 @@ private struct SpotlightView: View {
 	}
 }
 
-private extension View {
-	func reverseMask<Mask: View>(@ViewBuilder _ mask: () -> Mask) -> some View {
+extension View {
+	fileprivate func reverseMask<Mask: View>(@ViewBuilder _ mask: () -> Mask) -> some View {
 		self.mask {
 			Rectangle()
 				.overlay(alignment: .topLeading) { mask().blendMode(.destinationOut) }
@@ -176,7 +188,10 @@ struct DraggableAppIcon: NSViewRepresentable {
 	var size: CGFloat = 64
 	let onDrag: (Phase) -> Void
 
-	enum Phase { case began, ended(accepted: Bool) }
+	enum Phase {
+		case began
+		case ended(accepted: Bool)
+	}
 
 	func makeNSView(context: Context) -> DragSourceView {
 		let view = DragSourceView()
@@ -205,7 +220,10 @@ struct DraggableAppIcon: NSViewRepresentable {
 
 		override func draw(_ dirtyRect: NSRect) {
 			let side = min(bounds.width, bounds.height)
-			icon.draw(in: NSRect(x: (bounds.width - side) / 2, y: (bounds.height - side) / 2, width: side, height: side))
+			icon.draw(
+				in: NSRect(
+					x: (bounds.width - side) / 2, y: (bounds.height - side) / 2, width: side,
+					height: side))
 		}
 
 		override func resetCursorRects() { addCursorRect(bounds, cursor: .openHand) }
@@ -214,25 +232,32 @@ struct DraggableAppIcon: NSViewRepresentable {
 
 		override func mouseDragged(with event: NSEvent) {
 			guard let appURL, let down = mouseDownEvent else { return }
-			let distance = hypot(event.locationInWindow.x - down.locationInWindow.x,
-								 event.locationInWindow.y - down.locationInWindow.y)
+			let distance = hypot(
+				event.locationInWindow.x - down.locationInWindow.x,
+				event.locationInWindow.y - down.locationInWindow.y)
 			guard distance > 3 else { return }
 			mouseDownEvent = nil
 			let item = NSDraggingItem(pasteboardWriter: appURL as NSURL)
 			let side = min(bounds.width, bounds.height)
 			item.setDraggingFrame(
-				NSRect(x: (bounds.width - side) / 2, y: (bounds.height - side) / 2, width: side, height: side),
+				NSRect(
+					x: (bounds.width - side) / 2, y: (bounds.height - side) / 2, width: side,
+					height: side),
 				contents: icon)
 			onDrag?(.began)
 			let session = beginDraggingSession(with: [item], event: event, source: self)
 			session.animatesToStartingPositionsOnCancelOrFail = true
 		}
 
-		func draggingSession(_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext) -> NSDragOperation {
+		func draggingSession(
+			_ session: NSDraggingSession, sourceOperationMaskFor context: NSDraggingContext
+		) -> NSDragOperation {
 			context == .outsideApplication ? [.copy, .link, .generic] : []
 		}
 
-		func draggingSession(_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation) {
+		func draggingSession(
+			_ session: NSDraggingSession, endedAt screenPoint: NSPoint, operation: NSDragOperation
+		) {
 			onDrag?(.ended(accepted: operation != []))
 		}
 	}

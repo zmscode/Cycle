@@ -12,9 +12,37 @@ final class SwitcherController {
 	private let mru = MRUTracker()
 	private let thumbnails = ThumbnailCache()
 	private lazy var panel = SwitcherPanel(state: state, controller: self)
+	/// Cycle's settings: under the gear during a session, or on its own when reopened.
+	private(set) lazy var settingsPanel: SettingsPanelController = {
+		let settings = SettingsPanelController(tapIsRunning: { [weak self] in self?.tapIsRunning ?? false })
+		settings.settings.onChange = { [weak self] in self?.settingsChanged() }
+		return settings
+	}()
 
-	private var isActive = false
+	/// `loading` is between ⌘Tab and the window list arriving from the background scan;
+	/// key presses then are remembered and applied when it lands.
+	private enum Phase { case idle, loading, active }
+	private var phase: Phase = .idle
 	private var generation = 0
+	private let loader = WindowLoader()
+	private let focuser = FocusQueue()
+	/// Tab presses made while the list was loading.
+	private var pendingSteps = 0
+	private var startBackward = false
+	/// The modifier was released (or Return pressed) while loading: switch on arrival.
+	private var commitWhenLoaded = false
+	/// The panel's delay passed while loading: show it on arrival.
+	private var presentWhenLoaded = false
+	/// Catches a modifier release the tap missed (it can be briefly disabled), so a
+	/// session never stays open eating keys.
+	private var modifierWatchdog: Timer?
+	/// Thumbnails younger than this are reused instead of captured again.
+	private let thumbnailMaxAge: TimeInterval = 3
+
+	/// True while the session owns the keyboard.
+	private var ownsKeyboard: Bool {
+		phase == .active || (phase == .loading && !commitWhenLoaded)
+	}
 	private var sessionModifier: InitializerModifier = .command
 	private var sessionMode: ActivationMode = .onKeyRelease
 	private var presentationWork: DispatchWorkItem?
@@ -22,6 +50,11 @@ final class SwitcherController {
 	private(set) var mouseSelectionInitialLocation: CGPoint?
 
 	var tapIsRunning: Bool { tap.isRunning }
+
+	private func trace(_ message: @autoclosure () -> String) {
+		guard ProcessInfo.processInfo.environment["CYCLE_TRACE"] != nil else { return }
+		FileHandle.standardError.write("[\(Date().timeIntervalSince1970)] \(message())\n".data(using: .utf8)!)
+	}
 
 	func start() {
 		mru.start()
@@ -44,7 +77,7 @@ final class SwitcherController {
 	private func handle(_ type: CGEventType, _ event: CGEvent) -> Bool {
 		let flags = event.flags
 		let keyCode = CGKeyCode(event.getIntegerValueField(.keyboardEventKeycode))
-		let modifier = isActive ? sessionModifier : Settings.modifier
+		let modifier = ownsKeyboard ? sessionModifier : Settings.modifier
 		let modifierHeld = flags.contains(modifier.flag)
 		let shift = flags.contains(.maskShift)
 
@@ -53,23 +86,42 @@ final class SwitcherController {
 			// Releasing the initializer commits the highlighted window. The release itself
 			// passes through so the system's modifier state stays right.
 			// Searching holds the session open (DockDoor's `_searchHoldsSession`).
-			if isActive, !modifierHeld, sessionMode == .onKeyRelease, !state.isSearching {
+			if ownsKeyboard, !modifierHeld, holdsOnModifier {
 				commit()
 			}
 			return false
 
 		case .keyDown:
+			// A release the tap never saw: finish the session and let this key through.
+			if ownsKeyboard, holdsOnModifier, !modifierPhysicallyHeld {
+				commit()
+				return false
+			}
 			if keyCode == Key.tab, modifierHeld, onlyInitializer(flags, modifier) {
-				if isActive { step(shift ? -1 : 1) } else { begin(backward: shift) }
+				if ownsKeyboard { step(shift ? -1 : 1) } else { begin(backward: shift) }
 				return true
 			}
-			guard isActive else { return false }
+			guard ownsKeyboard else { return false }
+			// Until the list arrives only navigation and Escape mean anything.
+			if phase == .loading {
+				switch keyCode {
+				case Key.escape: cancel()
+				case Key.returnKey, Key.keypadEnter: commit()
+				case Key.left, Key.up: step(-1)
+				case Key.right, Key.down: step(1)
+				default: break
+				}
+				return true
+			}
 			switch keyCode {
 			case Key.escape:
-				if !state.searchQuery.isEmpty {
+				if state.isShowingSettings {
+					closeSettings()
+				} else if !state.searchQuery.isEmpty {
 					setQuery("")
 				} else if state.isSearching {
 					state.isSearching = false
+					panel.relayout()
 				} else {
 					cancel()
 				}
@@ -79,7 +131,9 @@ final class SwitcherController {
 			case Key.delete where state.isSearching: setQuery(String(state.searchQuery.dropLast()))
 			case _ where state.isSearching:
 				if let text = Self.typedText(event) { setQuery(state.searchQuery + text) }
-			case Key.searchTrigger: state.isSearching = true
+			case Key.searchTrigger:
+				state.isSearching = true
+				panel.relayout()
 			case Key.grave: stepWithinApp(shift ? -1 : 1)
 			case Key.w: perform(.close)
 			case Key.m: perform(.minimize)
@@ -92,11 +146,22 @@ final class SwitcherController {
 			return true
 
 		case .keyUp:
-			return isActive
+			return ownsKeyboard
 
 		default:
 			return false
 		}
+	}
+
+	/// Releasing the modifier ends the session (not while searching or in confirm mode).
+	private var holdsOnModifier: Bool {
+		sessionMode == .onKeyRelease && !state.isSearching && !state.isShowingSettings
+	}
+
+	/// The modifier's actual state, read from the event system rather than inferred from
+	/// the events the tap happened to see.
+	private var modifierPhysicallyHeld: Bool {
+		CGEventSource.flagsState(.combinedSessionState).contains(sessionModifier.flag)
 	}
 
 	/// Tab with the initializer, optionally Shift, and no other primary modifier.
@@ -109,65 +174,93 @@ final class SwitcherController {
 
 	// MARK: Session
 
+	/// Starts a session at once and loads the window list in the background, so the tap
+	/// returns immediately however long the scan takes.
 	private func begin(backward: Bool) {
-		var windows = WindowEnumerator.snapshot(
-			order: mru, includeWindowless: Settings.showWindowlessApps)
-		if Settings.currentSpaceOnly { windows.removeAll { $0.isOnOtherSpace } }
-		if !Settings.includeHiddenWindows { windows.removeAll { $0.isMinimized || $0.isAppHidden } }
-		guard !windows.isEmpty else { return }
-
 		generation += 1
-		isActive = true
+		let thisGeneration = generation
+		phase = .loading
+		trace("begin gen=\(generation)")
 		sessionModifier = Settings.modifier
 		sessionMode = Settings.activationMode
+		pendingSteps = 0
+		startBackward = backward
+		commitWhenLoaded = false
+		presentWhenLoaded = false
 		mouseSelectionInitialLocation = nil
-
-		state.allWindows = windows
-		state.windows = windows
 		state.searchQuery = ""
 		state.isSearching = false
-		state.images = [:]
-		state.tints = [:]
-		for w in windows {
-			if let cached = thumbnails.cached(w.id) {
-				state.images[w.id] = cached.image
-				state.tints[w.id] = cached.tint
-			}
-		}
-		// Start on the next window (the current one is first), or the last when going back.
-		let start = backward ? windows.count - 1 : min(1, windows.count - 1)
-		state.selectedID = windows[start].id
+		startWatchdog()
 
-		let thisGeneration = generation
-		thumbnails.capture(windows.filter { !$0.isWindowless }.map(\.id), best: false) {
-			[weak self] id, captured in
-			guard let self, self.generation == thisGeneration else { return }
-			self.state.images[id] = captured.image
-			self.state.tints[id] = captured.tint
+		loader.load(includeWindowless: Settings.showWindowlessApps) { [weak self] snapshot in
+			self?.loaded(snapshot, generation: thisGeneration)
 		}
-		thumbnails.prune(keeping: Set(windows.map(\.id)))
 
 		// A quick tap-and-release switches without ever drawing the panel.
 		let work = DispatchWorkItem { [weak self] in
-			guard let self, self.isActive, self.generation == thisGeneration else { return }
-			self.present()
+			guard let self, self.generation == thisGeneration else { return }
+			switch self.phase {
+			case .active: self.present()
+			case .loading: self.presentWhenLoaded = true
+			case .idle: break
+			}
 		}
 		presentationWork = work
 		DispatchQueue.main.asyncAfter(deadline: .now() + Settings.panelDelay, execute: work)
+	}
+
+	private func loaded(_ snapshot: WindowEnumerator.Snapshot, generation thisGeneration: Int) {
+		guard generation == thisGeneration, phase == .loading else { return }
+		trace("loaded \(snapshot.windows.count) windows commitWhenLoaded=\(commitWhenLoaded) presentWhenLoaded=\(presentWhenLoaded)")
+		var windows = mru.sort(snapshot.windows, zOrder: snapshot.zOrder)
+		if Settings.currentSpaceOnly { windows.removeAll { $0.isOnOtherSpace } }
+		if !Settings.includeHiddenWindows { windows.removeAll { $0.isMinimized || $0.isAppHidden } }
+		guard !windows.isEmpty else { return end() }
+
+		state.recentOrder = windows
+		state.allWindows = windows
+		state.windows = windows
+		state.images = [:]
+		state.tints = [:]
+		for window in windows {
+			if let cached = thumbnails.cached(window.id) {
+				state.images[window.id] = cached.image
+				state.tints[window.id] = cached.tint
+			}
+		}
+		// Start on the next window (the current one is first), or the last when going back,
+		// then apply any Tab presses made while loading.
+		let count = windows.count
+		let start = startBackward ? count - 1 : min(1, count - 1)
+		state.selectedID = windows[((start + pendingSteps) % count + count) % count].id
+		// Grouped layout: keep each app's windows together, starting from the same
+		// most-recent window.
+		if Settings.layout == .grouped {
+			state.allWindows = WindowGroup.groupedOrder(windows)
+			state.windows = state.allWindows
+		}
+		thumbnails.prune(keeping: Set(windows.map(\.id)))
+		phase = .active
+
+		if commitWhenLoaded { return commitNow() }
+		if presentWhenLoaded { present() }
 	}
 
 	/// `Cycle --preview`: opens a session without the keyboard, for checking the panel.
 	func preview(seconds: TimeInterval) {
 		begin(backward: false)
 		presentationWork?.cancel()
-		present()
+		presentWhenLoaded = true
 		DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in self?.cancel() }
 	}
 
 	/// `Cycle --demo`: a session over made-up windows, for screenshots.
-	func showDemo(_ windows: [SwitcherWindow], images: [CGWindowID: NSImage], tints: [CGWindowID: NSColor]) {
+	func showDemo(
+		_ windows: [SwitcherWindow], images: [CGWindowID: NSImage], tints: [CGWindowID: NSColor]
+	) {
 		generation += 1
-		isActive = true
+		phase = .active
+		state.recentOrder = windows
 		state.allWindows = windows
 		state.windows = windows
 		state.images = images
@@ -175,13 +268,20 @@ final class SwitcherController {
 		state.searchQuery = ""
 		state.isSearching = false
 		state.selectedID = windows[min(1, windows.count - 1)].id
+		if Settings.layout == .grouped {
+			state.allWindows = WindowGroup.groupedOrder(windows)
+			state.windows = state.allWindows
+		}
 		mouseSelectionInitialLocation = NSEvent.mouseLocation
 		panel.show()
 	}
 
 	private func present() {
+		guard phase == .active else { return }
 		mouseSelectionInitialLocation = NSEvent.mouseLocation
+		trace("present")
 		panel.show()
+		captureThumbnails()
 		outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [
 			.leftMouseDown, .rightMouseDown,
 		]) { [weak self] _ in
@@ -189,7 +289,24 @@ final class SwitcherController {
 		}
 	}
 
+	/// Captures only once the panel is on screen: a quick tap never captures, and a burst
+	/// of sessions reuses thumbnails taken in the last few seconds.
+	private func captureThumbnails() {
+		let thisGeneration = generation
+		let ids = state.windows.filter { !$0.isWindowless }.map(\.id)
+		thumbnails.capture(ids, best: false, maxAge: thumbnailMaxAge) { [weak self] id, captured in
+			guard let self, self.generation == thisGeneration else { return }
+			self.state.images[id] = captured.image
+			self.state.tints[id] = captured.tint
+		}
+	}
+
 	private func step(_ delta: Int) {
+		if phase == .loading {
+			pendingSteps += delta
+			return
+		}
+		guard phase == .active else { return }
 		let windows = state.windows
 		guard !windows.isEmpty else { return }
 		let index = windows.firstIndex { $0.id == state.selectedID } ?? 0
@@ -198,7 +315,7 @@ final class SwitcherController {
 
 	/// Next window of the highlighted app (DockDoor's in-switcher app-window stepping).
 	private func stepWithinApp(_ delta: Int) {
-		guard let selected = state.selected else { return }
+		guard phase == .active, let selected = state.selected else { return }
 		let siblings = state.windows.filter { $0.pid == selected.pid }
 		guard siblings.count > 1, let i = siblings.firstIndex(where: { $0.id == selected.id })
 		else { return }
@@ -208,27 +325,115 @@ final class SwitcherController {
 	func select(_ id: CGWindowID) { state.selectedID = id }
 
 	func commit() {
-		guard isActive else { return }
+		switch phase {
+		case .loading:
+			// Switch as soon as the list arrives; until then keys are the user's again.
+			commitWhenLoaded = true
+			presentationWork?.cancel()
+			stopWatchdog()
+		case .active:
+			commitNow()
+		case .idle:
+			break
+		}
+	}
+
+	private func commitNow() {
 		let target = state.selected
 		end()
 		guard let target else { return }
-		WindowActions.focus(target)
+		focuser.focus(target)
 		mru.touch(target.id)
 	}
 
 	func cancel() {
-		guard isActive else { return }
+		guard phase != .idle else { return }
 		end()
 	}
 
 	private func end() {
-		isActive = false
+		trace("end phase=\(phase)")
+		phase = .idle
 		generation += 1
+		commitWhenLoaded = false
+		presentWhenLoaded = false
+		stopWatchdog()
 		presentationWork?.cancel()
 		presentationWork = nil
 		if let outsideClickMonitor { NSEvent.removeMonitor(outsideClickMonitor) }
 		outsideClickMonitor = nil
+		thumbnails.cancelPending()
+		if state.isShowingSettings { closeSettings() }
 		panel.hide()
+	}
+
+	private func startWatchdog() {
+		stopWatchdog()
+		let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+			MainActor.assumeIsolated { self?.checkModifier() }
+		}
+		RunLoop.main.add(timer, forMode: .common)
+		modifierWatchdog = timer
+	}
+
+	private func stopWatchdog() {
+		modifierWatchdog?.invalidate()
+		modifierWatchdog = nil
+	}
+
+	private func checkModifier() {
+		guard ownsKeyboard, holdsOnModifier, !modifierPhysicallyHeld else { return }
+		trace("watchdog commit")
+		commit()
+	}
+
+	// MARK: Settings (the gear)
+
+	/// Opens or closes the settings panel under the gear. While open it holds the session,
+	/// so the modifier can be let go to use it.
+	func toggleSettings() {
+		if state.isShowingSettings { return closeSettings() }
+		guard phase == .active, let frame = panel.frame else { return }
+		state.isShowingSettings = true
+		settingsPanel.show(topLeft: settingsAnchor(in: frame))
+	}
+
+	private func closeSettings() {
+		state.isShowingSettings = false
+		settingsPanel.close()
+		// If the modifier was let go while settings were open, finish the session now.
+		if phase == .active, holdsOnModifier, !modifierPhysicallyHeld { commit() }
+	}
+
+	/// Beside the switcher, never over its windows: to the left with the tops aligned (the
+	/// gear's side), or just below the panel when it's too wide to leave room.
+	private func settingsAnchor(in frame: CGRect) -> CGPoint {
+		let size = settingsPanel.size
+		let gap: CGFloat = 12
+		let visible = SwitcherPanel.screenUnderPointer().visibleFrame
+		if frame.minX - gap - size.width >= visible.minX {
+			return CGPoint(x: frame.minX - gap - size.width, y: frame.maxY)
+		}
+		if frame.maxX + gap + size.width <= visible.maxX {
+			return CGPoint(x: frame.maxX + gap, y: frame.maxY)
+		}
+		let x = min(max(frame.minX, visible.minX), visible.maxX - size.width)
+		let y = max(frame.minY - gap, visible.minY + size.height)
+		return CGPoint(x: x, y: y)
+	}
+
+	/// A setting changed in the panel: redraw an open switcher in the new arrangement.
+	private func settingsChanged() {
+		guard phase == .active else { return }
+		let recent = state.recentOrder
+		state.allWindows = Settings.layout == .grouped ? WindowGroup.groupedOrder(recent) : recent
+		let selected = state.selectedID
+		setQuery(state.searchQuery)
+		state.selectedID = selected
+		panel.relayout()
+		if state.isShowingSettings, let frame = panel.frame {
+			settingsPanel.show(topLeft: settingsAnchor(in: frame))
+		}
 	}
 
 	// MARK: Window controls (keyboard and the card's traffic lights)
@@ -238,6 +443,7 @@ final class SwitcherController {
 	/// `windowSwitcherKeepOpenAfterWindowAction`, except for full screen, which needs focus.
 	func perform(_ action: CardAction, on id: CGWindowID? = nil) {
 		guard
+			phase == .active,
 			let window = id.flatMap({ id in state.windows.first { $0.id == id } }) ?? state.selected
 		else { return }
 		switch action {
@@ -258,9 +464,8 @@ final class SwitcherController {
 		case .fullScreen:
 			guard !window.isWindowless else { return }
 			end()
-			WindowActions.focus(window)
+			focuser.focus(window, then: WindowActions.toggleFullScreen)
 			mru.touch(window.id)
-			WindowActions.toggleFullScreen(window)
 		}
 	}
 
@@ -282,6 +487,7 @@ final class SwitcherController {
 	// MARK: Search
 
 	private func setQuery(_ query: String) {
+		guard phase == .active else { return }
 		state.searchQuery = query
 		state.windows =
 			query.isEmpty
@@ -319,7 +525,7 @@ final class SwitcherController {
 		let thisGeneration = generation
 		let selected = state.selectedID
 		DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-			guard let self, self.isActive, self.generation == thisGeneration else { return }
+			guard let self, self.phase == .active, self.generation == thisGeneration else { return }
 			var windows = WindowEnumerator.snapshot(
 				order: self.mru, includeWindowless: Settings.showWindowlessApps)
 			if Settings.currentSpaceOnly { windows.removeAll { $0.isOnOtherSpace } }
@@ -351,26 +557,4 @@ final class SwitcherController {
 		state.selectedID = id
 		commit()
 	}
-}
-
-/// The card controls, in DockDoor's default traffic-light order (its `PreviewAction`
-/// cases quit / close / minimize / fullscreen).
-enum CardAction: CaseIterable {
-	case quit, close, minimize, fullScreen, hide
-	static let trafficLights: [CardAction] = [.quit, .close, .minimize, .fullScreen]
-}
-
-@Observable
-final class SwitcherState {
-	/// The session's full list; `windows` is it filtered by the search query.
-	var allWindows: [SwitcherWindow] = []
-	var windows: [SwitcherWindow] = []
-	var selectedID: CGWindowID?
-	var images: [CGWindowID: NSImage] = [:]
-	/// Average colour of each thumbnail; the card is tinted with it.
-	var tints: [CGWindowID: NSColor] = [:]
-	var isSearching = false
-	var searchQuery = ""
-
-	var selected: SwitcherWindow? { windows.first { $0.id == selectedID } }
 }

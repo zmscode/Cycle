@@ -19,6 +19,8 @@ enum WindowActions {
 			app.activate()
 		}
 		if let ax = window.axElement {
+			// A hung app shouldn't hold the focus queue for AX's default six seconds.
+			AXUIElementSetMessagingTimeout(ax, 0.25)
 			AXUIElementPerformAction(ax, kAXRaiseAction as CFString)
 			AXUIElementSetAttributeValue(ax, kAXMainAttribute as CFString, kCFBooleanTrue)
 		}
@@ -41,7 +43,8 @@ enum WindowActions {
 	static func toggleFullScreen(_ window: SwitcherWindow) {
 		guard let ax = window.axElement else { return }
 		let isFull: Bool = ax.attribute("AXFullScreen") ?? false
-		AXUIElementSetAttributeValue(ax, "AXFullScreen" as CFString, isFull ? kCFBooleanFalse : kCFBooleanTrue)
+		AXUIElementSetAttributeValue(
+			ax, "AXFullScreen" as CFString, isFull ? kCFBooleanFalse : kCFBooleanTrue)
 	}
 
 	static func quit(_ window: SwitcherWindow) {

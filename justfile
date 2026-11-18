@@ -20,7 +20,7 @@ build config="release":
     mkdir -p "{{ app }}/Contents/MacOS" "{{ app }}/Contents/Resources"
     cp "$bin/Cycle" "{{ app }}/Contents/MacOS/Cycle"
     cp Support/Info.plist "{{ app }}/Contents/Info.plist"
-    cp Support/AppIcon.icns Support/MenuBarIcon.svg "{{ app }}/Contents/Resources/"
+    cp Support/AppIcon.icns "{{ app }}/Contents/Resources/"
     xattr -cr "{{ app }}"
     # A stable signing identity keeps the Accessibility grant across rebuilds;
     # ad hoc signing means re-granting after each build.

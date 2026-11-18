@@ -13,9 +13,16 @@ between windows, not apps, with live thumbnails on Liquid Glass cards.
 | Esc           | clear search, then cancel                                |
 | Q W M F H     | quit app, close, minimize, full screen, hide             |
 
-The card's traffic lights do quit / close / minimize / full screen. A quick ⌘Tab tap switches to
-the previous window without showing the panel. The menu-bar icon picks ⌘/⌥/⌃ as the modifier and
-holds a few options.
+Windows are grouped by app by default; a grid and a list (with a large preview) are the
+other layouts. Each window's controls (close, minimize, full screen, then quit) appear on it
+when it's highlighted or under the pointer. A quick ⌘Tab tap switches to the previous window
+without showing the panel, and pressing ⌘Tab rapidly never leaves the switcher stuck open.
+
+There's no menu-bar item. Settings are behind the gear at the top left of the switcher (it
+holds the switcher open while you use them), or open Cycle again from Finder or Spotlight.
+They cover the layout, the modifier (⌘, ⌥ or ⌃), whether the switcher stays open until
+Return, this Space only, minimized and hidden windows, apps without windows (off by default),
+and the search bar. Quit is in the settings header.
 
 ## Build
 
@@ -39,11 +46,11 @@ certificate instead.
 ## Icons
 
 SVG sources are in `Support/Icons` (`cycle-minimal` is the app icon; `cycle-panes`,
-`cycle-carousel` and `cycle-orbit` are alternatives; `menubar-template` is the menu-bar glyph).
+`cycle-carousel` and `cycle-orbit` are alternatives).
 `just icon <name>` rebuilds `Support/AppIcon.icns` from one of them.
 
 `open build/Cycle.app --args --setup` shows the setup window even when everything is granted.
-`Cycle --dump` prints the window list a session would show; `Cycle --demo` opens it over made-up windows; `Cycle --preview` shows the panel for
+`Cycle --dump` prints the window list a session would show; `Cycle --demo [grouped|grid|list]` opens it over made-up windows (add `--with-settings` to open settings too); `Cycle --preview` shows the panel for
 four seconds without the keyboard.
 
 It uses private SkyLight and HIServices calls (`CGSHWCaptureWindowList`, `_AXUIElementGetWindow`,
