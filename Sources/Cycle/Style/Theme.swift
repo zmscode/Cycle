@@ -8,8 +8,8 @@ enum Theme {
 		static let padding: CGFloat = 16
 		static let spacing: CGFloat = 6
 		static let searchHeight: CGFloat = 44
-		/// The top row with the search bar turned off: just room for the settings button.
-		static let compactHeaderHeight: CGFloat = 38
+		/// With the search bar off there's no top row at all.
+		static let compactHeaderHeight: CGFloat = 0
 		static let minWidth: CGFloat = 420
 	}
 
@@ -47,6 +47,12 @@ enum Theme {
 		static let maxThumbHeight: CGFloat = 120
 		static let minThumbHeight: CGFloat = 80
 		static let minWidth: CGFloat = 200
+	}
+
+	/// The floating settings button beside the switcher.
+	enum Gear {
+		static let diameter: CGFloat = 40
+		static let gap: CGFloat = 10
 	}
 
 	enum Controls {

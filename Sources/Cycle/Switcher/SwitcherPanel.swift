@@ -10,6 +10,8 @@ final class SwitcherPanel {
 	private unowned let controller: SwitcherController
 	private var panel: NSPanel?
 	private var host: NSHostingView<SwitcherView>?
+	/// The settings button's own little window, floating just left of the panel.
+	private var gearPanel: NSPanel?
 
 	init(state: SwitcherState, controller: SwitcherController) {
 		self.state = state
@@ -22,16 +24,21 @@ final class SwitcherPanel {
 		relayout()
 		panel.alphaValue = 1
 		panel.orderFrontRegardless()
+		gearPanel?.orderFrontRegardless()
 	}
 
-	/// The panel's frame on screen, for placing the settings panel under its gear.
+	/// The panel's frame on screen.
 	var frame: CGRect? { panel?.isVisible == true ? panel?.frame : nil }
+
+	/// The settings button's frame on screen; settings open beside it.
+	var gearFrame: CGRect? { gearPanel?.isVisible == true ? gearPanel?.frame : nil }
 
 	/// The top row's height in the current layout.
 	private(set) var headerHeight: CGFloat = Theme.Panel.searchHeight
 
 	func hide() {
 		panel?.orderOut(nil)
+		gearPanel?.orderOut(nil)
 	}
 
 	/// Re-measure for the current window list and recentre.
@@ -53,6 +60,34 @@ final class SwitcherPanel {
 			).integral,
 			display: true
 		)
+		placeGear(beside: panel.frame)
+	}
+
+	/// Puts the settings button just left of the panel, top edges aligned, creating its
+	/// window on first use.
+	private func placeGear(beside frame: CGRect) {
+		let gear = gearPanel ?? makeGearPanel()
+		gearPanel = gear
+		let size = Theme.Gear.diameter
+		gear.setFrame(
+			CGRect(x: frame.minX - Theme.Gear.gap - size, y: frame.maxY - size, width: size, height: size),
+			display: true)
+	}
+
+	private func makeGearPanel() -> NSPanel {
+		let gear = NSPanel(
+			contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
+			backing: .buffered, defer: false)
+		gear.level = .popUpMenu
+		gear.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+		gear.isOpaque = false
+		gear.backgroundColor = .clear
+		gear.hasShadow = false
+		gear.becomesKeyOnlyIfNeeded = true
+		gear.animationBehavior = .none
+		gear.contentView = NSHostingView(
+			rootView: FloatingSettingsButton(state: state, onToggle: { [weak controller] in controller?.toggleSettings() }))
+		return gear
 	}
 
 	private func makePanel() -> NSPanel {

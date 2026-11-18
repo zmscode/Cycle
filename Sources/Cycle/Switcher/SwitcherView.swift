@@ -1,7 +1,6 @@
 import SwiftUI
 
-/// The panel: the header (settings button and search bar) along the top and the windows
-/// below, on one sheet of dark glass, like the system's own switcher.
+/// The panel: the search bar along the top (when it's on) and the windows below, on one sheet of dark glass, like the system's own switcher.
 struct SwitcherView: View {
 	let state: SwitcherState
 	let controller: SwitcherController
@@ -9,8 +8,14 @@ struct SwitcherView: View {
 
 	var body: some View {
 		VStack(spacing: 0) {
-			SwitcherHeader(state: state, controller: controller, metrics: metrics)
 			if metrics.showsSearchBar {
+				SearchBar(
+					isSearching: state.isSearching,
+					query: state.searchQuery,
+					windowCount: state.windows.count,
+					previewsAllowed: Permissions.shared.screenRecording)
+				.padding(.horizontal, Theme.Panel.padding + 4)
+				.frame(height: metrics.headerHeight)
 				Divider()
 					.padding(.horizontal, Theme.Panel.padding)
 			}

@@ -101,6 +101,10 @@ final class SwitcherController {
 				if ownsKeyboard { step(shift ? -1 : 1) } else { begin(backward: shift) }
 				return true
 			}
+			if !ownsKeyboard, keyCode == Key.escape, settingsPanel.isVisible {
+				settingsPanel.close()
+				return true
+			}
 			guard ownsKeyboard else { return false }
 			// Until the list arrives only navigation and Escape mean anything.
 			if phase == .loading {
@@ -395,24 +399,27 @@ final class SwitcherController {
 		if state.isShowingSettings { return closeSettings() }
 		guard phase == .active, let frame = panel.frame else { return }
 		state.isShowingSettings = true
+		// From here the session stays open until Return, a click or Escape, so letting go
+		// of the modifier to use settings doesn't switch windows.
+		sessionMode = .onConfirmation
 		settingsPanel.show(topLeft: settingsAnchor(in: frame))
 	}
 
+	/// Closes settings; the switcher stays open (Escape again to close it).
 	private func closeSettings() {
 		state.isShowingSettings = false
 		settingsPanel.close()
-		// If the modifier was let go while settings were open, finish the session now.
-		if phase == .active, holdsOnModifier, !modifierPhysicallyHeld { commit() }
 	}
 
-	/// Beside the switcher, never over its windows: to the left with the tops aligned (the
-	/// gear's side), or just below the panel when it's too wide to leave room.
+	/// Beside the switcher, never over its windows: left of the gear with the tops aligned,
+	/// else right of the panel, else just below it.
 	private func settingsAnchor(in frame: CGRect) -> CGPoint {
 		let size = settingsPanel.size
 		let gap: CGFloat = 12
 		let visible = SwitcherPanel.screenUnderPointer().visibleFrame
-		if frame.minX - gap - size.width >= visible.minX {
-			return CGPoint(x: frame.minX - gap - size.width, y: frame.maxY)
+		let leftEdge = panel.gearFrame?.minX ?? frame.minX
+		if leftEdge - gap - size.width >= visible.minX {
+			return CGPoint(x: leftEdge - gap - size.width, y: frame.maxY)
 		}
 		if frame.maxX + gap + size.width <= visible.maxX {
 			return CGPoint(x: frame.maxX + gap, y: frame.maxY)

@@ -12,7 +12,7 @@ struct SettingsPanelView: View {
 
 	var body: some View {
 		VStack(spacing: 0) {
-			SettingsPanelHeader(modifier: settings.modifier, onQuit: onQuit)
+			SettingsPanelHeader(onQuit: onQuit)
 			Divider()
 				.padding(.horizontal, Theme.Panel.padding)
 			VStack(spacing: ControlTileMetrics.spacing) {
