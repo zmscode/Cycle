@@ -30,8 +30,10 @@ final class SwitcherController {
 	private var pendingSteps = 0
 	/// Trackpad scrolling accumulated toward the next step.
 	private var scrollRemainder: CGFloat = 0
-	/// Points of trackpad scroll per window step.
-	private let scrollStepDistance: CGFloat = 28
+	/// Points of trackpad scroll per window step; momentum after lifting the fingers
+	/// counts for half, so a flick glides to a stop instead of racing ahead.
+	private let scrollStepDistance: CGFloat = 20
+	private let momentumWeight: CGFloat = 0.5
 	private var startBackward = false
 	/// The modifier was released (or Return pressed) while loading: switch on arrival.
 	private var commitWhenLoaded = false
@@ -40,6 +42,9 @@ final class SwitcherController {
 	/// Catches a modifier release the tap missed (it can be briefly disabled), so a
 	/// session never stays open eating keys.
 	private var modifierWatchdog: Timer?
+	/// Watchdog checks in a row that found the modifier up. Acting needs two (0.2 s), so a
+	/// momentary misreading of the modifier state can't end a session early.
+	private var releasedChecks = 0
 	/// Thumbnails younger than this are reused instead of captured again.
 	private let thumbnailMaxAge: TimeInterval = 3
 
@@ -97,7 +102,8 @@ final class SwitcherController {
 
 		case .keyDown:
 			// A release the tap never saw: finish the session and let this key through.
-			if ownsKeyboard, holdsOnModifier, !modifierPhysicallyHeld {
+			// The key event's own flags count too: only when both say the modifier is up.
+			if ownsKeyboard, holdsOnModifier, !modifierHeld, !modifierPhysicallyHeld {
 				commit()
 				return false
 			}
@@ -363,20 +369,23 @@ final class SwitcherController {
 	}
 
 	/// The scroll wheel steps through windows: down (or right) for the next one, up (or
-	/// left) for the previous, wrapping like Tab. A mouse wheel moves one window per notch;
-	/// trackpad scrolling moves one per `scrollStepDistance` points, and the momentum
-	/// after lifting the fingers is ignored so a flick can't run away.
+	/// left) for the previous, wrapping like Tab. A mouse wheel moves one window per notch.
+	/// Trackpad scrolling moves one per `scrollStepDistance` points with a light haptic
+	/// tick per step; momentum keeps going at `momentumWeight`, so flicks glide.
 	private func scrolled(_ event: CGEvent) {
-		guard event.getIntegerValueField(.scrollWheelEventMomentumPhase) == 0 else { return }
 		let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
 		if continuous {
+			let momentum = event.getIntegerValueField(.scrollWheelEventMomentumPhase) != 0
+			// A new gesture starts from zero rather than finishing the last one's leftover.
+			if event.getIntegerValueField(.scrollWheelEventScrollPhase) == 1 { scrollRemainder = 0 }
 			let vertical = event.getDoubleValueField(.scrollWheelEventPointDeltaAxis1)
 			let horizontal = event.getDoubleValueField(.scrollWheelEventPointDeltaAxis2)
 			let delta = abs(vertical) >= abs(horizontal) ? vertical : horizontal
-			scrollRemainder += delta
+			scrollRemainder += delta * (momentum ? momentumWeight : 1)
 			while abs(scrollRemainder) >= scrollStepDistance {
 				step(scrollRemainder > 0 ? -1 : 1)
 				scrollRemainder -= scrollRemainder > 0 ? scrollStepDistance : -scrollStepDistance
+				NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
 			}
 		} else {
 			let lines = event.getIntegerValueField(.scrollWheelEventDeltaAxis1)
@@ -442,6 +451,7 @@ final class SwitcherController {
 
 	private func startWatchdog() {
 		stopWatchdog()
+		releasedChecks = 0
 		let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
 			MainActor.assumeIsolated { self?.checkModifier() }
 		}
@@ -455,7 +465,12 @@ final class SwitcherController {
 	}
 
 	private func checkModifier() {
-		guard ownsKeyboard, holdsOnModifier, !modifierPhysicallyHeld else { return }
+		guard ownsKeyboard, holdsOnModifier, !modifierPhysicallyHeld else {
+			releasedChecks = 0
+			return
+		}
+		releasedChecks += 1
+		guard releasedChecks >= 2 else { return }
 		trace("watchdog commit")
 		commit()
 	}

@@ -40,7 +40,14 @@ final class ThumbnailCache: @unchecked Sendable {
 		}
 		for id in stale {
 			queue.addOperation { [weak self] in
-				guard let image = Self.captureOne(id, best: best) else { return }
+				guard let raw = Self.captureOne(id, best: best) else { return }
+				// DockDoor's rule (0x100b54e90 / 0x100b54f58): a capture with no visible
+				// pixels failed, and one that's mostly see-through (often a window still
+				// drawing) doesn't replace the image already shown.
+				let coverage = Self.coverage(raw)
+				if coverage == 0 { return }
+				if coverage < 0.5, self?.cached(id) != nil { return }
+				let image = Self.flattened(raw)
 				let captured = Captured(
 					image: NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height)),
 					tint: Self.averageColor(image),
@@ -49,6 +56,33 @@ final class ThumbnailCache: @unchecked Sendable {
 				DispatchQueue.main.async { completion(id, captured) }
 			}
 		}
+	}
+
+	/// For `Cycle --dump`: what the capture pipeline makes of one window.
+	static func inspect(_ id: CGWindowID) -> String {
+		guard let raw = captureOne(id, best: false) else { return "no capture" }
+		let flat = flattened(raw)
+		let backdrop = backdropColor(raw).flatMap { color in
+			color.components.map { $0.prefix(3).map { String(format: "%.2f", $0) }.joined(separator: " ") }
+		} ?? "none"
+		return String(
+			format: "%dx%d coverage %.2f flattened %@ fill [%@] mean %.2f",
+			raw.width, raw.height, coverage(raw), flat === raw ? "no" : "yes", backdrop, meanBrightness(flat))
+	}
+
+	private static func meanBrightness(_ image: CGImage) -> Double {
+		let side = 32
+		var pixels = [UInt8](repeating: 0, count: side * side * 4)
+		guard let context = CGContext(
+			data: &pixels, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
+			space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+		else { return 0 }
+		context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+		var sum = 0.0
+		for i in stride(from: 0, to: pixels.count, by: 4) {
+			sum += Double(pixels[i]) + Double(pixels[i + 1]) + Double(pixels[i + 2])
+		}
+		return sum / Double(side * side * 3) / 255
 	}
 
 	/// Drops captures queued for a session that has ended.
@@ -69,6 +103,97 @@ final class ThumbnailCache: @unchecked Sendable {
 			let image = array.first, image.width > 1, image.height > 1
 		else { return nil }
 		return image
+	}
+
+	/// The share of a capture's pixels that aren't fully transparent, sampled on a grid
+	/// (DockDoor's 0x100b5adec does the same count over the raw bytes).
+	private static func coverage(_ image: CGImage) -> Double {
+		switch image.alphaInfo {
+		case .none, .noneSkipFirst, .noneSkipLast: return 1
+		default: break
+		}
+		let side = 32
+		var pixels = [UInt8](repeating: 0, count: side * side * 4)
+		guard
+			let context = CGContext(
+				data: &pixels, width: side, height: side, bitsPerComponent: 8,
+				bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
+				bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+		else { return 1 }
+		context.interpolationQuality = .none
+		context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+		var visible = 0
+		for i in stride(from: 3, to: pixels.count, by: 4) where pixels[i] > 0 { visible += 1 }
+		return Double(visible) / Double(side * side)
+	}
+
+	/// Translucent windows (see-through terminals, vibrancy sidebars) capture with alpha,
+	/// and the switcher's own glass would show through them. This puts the capture on a
+	/// solid fill in the average colour of the window's opaque pixels — dark for a dark
+	/// terminal, light for a light sidebar — close to the frosted backdrop it has on
+	/// screen. Images with (almost) no transparency are returned unchanged.
+	private static func flattened(_ image: CGImage) -> CGImage {
+		switch image.alphaInfo {
+		case .none, .noneSkipFirst, .noneSkipLast: return image
+		default: break
+		}
+		guard let backdrop = backdropColor(image) else { return image }
+		let width = image.width
+		let height = image.height
+		guard
+			let context = CGContext(
+				data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+				space: image.colorSpace ?? CGColorSpaceCreateDeviceRGB(),
+				bitmapInfo: CGImageAlphaInfo.noneSkipFirst.rawValue
+					| CGBitmapInfo.byteOrder32Little.rawValue)
+		else { return image }
+		let bounds = CGRect(x: 0, y: 0, width: width, height: height)
+		context.setFillColor(backdrop)
+		context.fill(bounds)
+		context.draw(image, in: bounds)
+		return context.makeImage() ?? image
+	}
+
+	/// The colour of a capture's own translucent background — the semi-transparent pixels,
+	/// with alpha divided out — so a see-through terminal gets its dark tint and a vibrancy
+	/// sidebar its light one, and text stays readable. Nil when under 1% of the capture is
+	/// see-through (no flattening needed); the opaque pixels' average when nothing is
+	/// partly transparent; dark grey as a last resort.
+	private static func backdropColor(_ image: CGImage) -> CGColor? {
+		let side = 32
+		var pixels = [UInt8](repeating: 0, count: side * side * 4)
+		guard
+			let context = CGContext(
+				data: &pixels, width: side, height: side, bitsPerComponent: 8,
+				bytesPerRow: side * 4, space: CGColorSpaceCreateDeviceRGB(),
+				bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+		else { return nil }
+		context.interpolationQuality = .low
+		context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
+		// Sums of colour (alpha divided out) for partly transparent and for opaque pixels.
+		var tinted = (r: 0.0, g: 0.0, b: 0.0, count: 0.0)
+		var solid = (r: 0.0, g: 0.0, b: 0.0, count: 0.0)
+		var transparent = 0
+		for i in stride(from: 0, to: pixels.count, by: 4) {
+			let alpha = Double(pixels[i + 3]) / 255
+			if alpha < 0.98 { transparent += 1 }
+			guard alpha > 0.04 else { continue }
+			// Premultiplied: divide out alpha to get the colour itself.
+			let r = min(Double(pixels[i]) / 255 / alpha, 1)
+			let g = min(Double(pixels[i + 1]) / 255 / alpha, 1)
+			let b = min(Double(pixels[i + 2]) / 255 / alpha, 1)
+			if alpha < 0.95 {
+				tinted = (tinted.r + r, tinted.g + g, tinted.b + b, tinted.count + 1)
+			} else {
+				solid = (solid.r + r, solid.g + g, solid.b + b, solid.count + 1)
+			}
+		}
+		guard Double(transparent) / Double(side * side) >= 0.01 else { return nil }
+		let source = tinted.count > 0 ? tinted : solid
+		guard source.count > 0 else { return CGColor(srgbRed: 0.12, green: 0.12, blue: 0.13, alpha: 1) }
+		return CGColor(
+			srgbRed: source.r / source.count, green: source.g / source.count,
+			blue: source.b / source.count, alpha: 1)
 	}
 
 	/// A saturated version of the window's dominant colour: samples a 16×16 downscale,

@@ -77,7 +77,9 @@ enum Theme {
 	}
 
 	enum Motion {
-		static let selection = Animation.smooth(duration: 0.2)
+		/// Quick and interruptible, so rapid steps (scrolling, held arrows) flow into one
+		/// another instead of queueing.
+		static let selection = Animation.snappy(duration: 0.16)
 		static let fade = Animation.easeOut(duration: 0.15)
 	}
 }

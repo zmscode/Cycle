@@ -62,6 +62,7 @@ enum Diagnostics {
 			print(
 				"  \(w.id)\t\(w.appName) — \(w.displayTitle.prefix(50))\t\(Int(w.bounds.width))x\(Int(w.bounds.height))\t[\(flags.joined(separator: ","))]"
 			)
+			if !w.isWindowless { print("      capture: \(ThumbnailCache.inspect(w.id))") }
 		}
 		let cache = ThumbnailCache()
 		let ids = windows.filter { !$0.isWindowless }.map(\.id)
