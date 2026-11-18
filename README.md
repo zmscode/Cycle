@@ -5,26 +5,29 @@ between windows, not apps, with live thumbnails on Liquid Glass cards.
 
 ## Use
 
-| Key           | Does                                                     |
-| ------------- | -------------------------------------------------------- |
-| ⌘Tab (hold ⌘) | open; Tab / Shift-Tab / arrows move; release ⌘ to switch |
-| ⌘`            | next window of the highlighted app                       |
-| `,`           | search windows (stays open; Return switches)             |
-| Esc           | clear search, then cancel                                |
-| Q W M F H     | quit app, close, minimize, full screen, hide             |
+| Key                   | Does                                                          |
+| --------------------- | ------------------------------------------------------------- |
+| ⌘Tab (hold ⌘)         | open; Tab / Shift-Tab step through windows; release ⌘ to switch |
+| ← →                   | move along the current row                                    |
+| ↑ ↓                   | move to the row above or below                                |
+| scroll                | next / previous window                                        |
+| type                  | filter by app or window name (release ⌘ to switch to the match) |
+| ⌘`                    | next window of the highlighted app                            |
+| Esc                   | close settings, then clear the filter, then cancel            |
+| Return                | switch to the highlighted window                              |
 
 Windows are grouped by app by default; a grid and a list (with a large preview) are the
 other layouts. Each window's controls (close, minimize, full screen, then quit) appear on it
 when it's highlighted or under the pointer. A quick ⌘Tab tap switches to the previous window
 without showing the panel, and pressing ⌘Tab rapidly never leaves the switcher stuck open.
 
-There's no menu-bar item. Settings are behind the round gear in the top-right corner of the screen while the switcher is open
-(it keeps the switcher open until Return, a click or Escape; Escape closes settings first), or
+There's no menu-bar item. Settings are behind the round gear in the top-right corner of the
+screen while the switcher is open (it keeps the switcher open until Return, a click or Escape; Escape closes settings first), or
 open Cycle again from Finder or Spotlight.
 They cover the layout, the modifier (⌘, ⌥ or ⌃), whether the switcher stays open until
-Return, this Space only, minimized and hidden windows, apps without windows (off by default),
-and the search bar (off removes the switcher's top row; `,` still searches). Quit is in the
-settings header.
+Return, this Space only, minimized and hidden windows, and apps without windows (off by
+default). Quit is in the settings header. There are no letter shortcuts, so typing always
+filters; the window controls on each card do close, minimize, full screen and quit.
 
 ## Build
 

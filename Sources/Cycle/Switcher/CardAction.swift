@@ -18,17 +18,6 @@ enum CardAction: CaseIterable {
 		}
 	}
 
-	/// The tooltip, with the key that does the same while the switcher is open.
-	var helpText: LocalizedStringKey {
-		switch self {
-		case .quit: "Quit App (Q)"
-		case .close: "Close Window (W)"
-		case .minimize: "Minimize (M)"
-		case .fullScreen: "Full Screen (F)"
-		case .hide: "Hide App (H)"
-		}
-	}
-
 	var systemImage: String {
 		switch self {
 		case .quit: "power"

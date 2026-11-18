@@ -28,6 +28,10 @@ final class SwitcherController {
 	private let focuser = FocusQueue()
 	/// Tab presses made while the list was loading.
 	private var pendingSteps = 0
+	/// Trackpad scrolling accumulated toward the next step.
+	private var scrollRemainder: CGFloat = 0
+	/// Points of trackpad scroll per window step.
+	private let scrollStepDistance: CGFloat = 28
 	private var startBackward = false
 	/// The modifier was released (or Return pressed) while loading: switch on arrival.
 	private var commitWhenLoaded = false
@@ -111,8 +115,10 @@ final class SwitcherController {
 				switch keyCode {
 				case Key.escape: cancel()
 				case Key.returnKey, Key.keypadEnter: commit()
-				case Key.left, Key.up: step(-1)
-				case Key.right, Key.down: step(1)
+				case Key.left: move(.left)
+				case Key.right: move(.right)
+				case Key.up: move(.up)
+				case Key.down: move(.down)
 				default: break
 				}
 				return true
@@ -123,28 +129,25 @@ final class SwitcherController {
 					closeSettings()
 				} else if !state.searchQuery.isEmpty {
 					setQuery("")
-				} else if state.isSearching {
-					state.isSearching = false
-					panel.relayout()
 				} else {
 					cancel()
 				}
 			case Key.returnKey, Key.keypadEnter: commit()
-			case Key.left, Key.up: step(-1)
-			case Key.right, Key.down: step(1)
-			case Key.delete where state.isSearching: setQuery(String(state.searchQuery.dropLast()))
-			case _ where state.isSearching:
-				if let text = Self.typedText(event) { setQuery(state.searchQuery + text) }
-			case Key.searchTrigger:
-				state.isSearching = true
-				panel.relayout()
+			case Key.left: move(.left)
+			case Key.right: move(.right)
+			case Key.up: move(.up)
+			case Key.down: move(.down)
+			case Key.delete:
+				if !state.searchQuery.isEmpty { setQuery(String(state.searchQuery.dropLast())) }
 			case Key.grave: stepWithinApp(shift ? -1 : 1)
-			case Key.w: perform(.close)
-			case Key.m: perform(.minimize)
-			case Key.h: perform(.hide)
-			case Key.f: perform(.fullScreen)
-			case Key.q: perform(.quit)
-			default: break
+			default:
+				// Typing filters: letters, digits and the like go into the query. There are
+				// no letter shortcuts, so nothing else claims them. A leading space is ignored.
+				if let text = Self.typedText(event),
+					!(state.searchQuery.isEmpty && text.allSatisfy(\.isWhitespace))
+				{
+					setQuery(state.searchQuery + text)
+				}
 			}
 			// While a session is open every key belongs to it.
 			return true
@@ -152,14 +155,21 @@ final class SwitcherController {
 		case .keyUp:
 			return ownsKeyboard
 
+		case .scrollWheel:
+			guard ownsKeyboard else { return false }
+			scrolled(event)
+			// Swallowed, so the window underneath doesn't scroll as well.
+			return true
+
 		default:
 			return false
 		}
 	}
 
-	/// Releasing the modifier ends the session (not while searching or in confirm mode).
+	/// Releasing the modifier ends the session, switching to the highlighted window — a
+	/// filtered one included (not while settings are open, or in confirm mode).
 	private var holdsOnModifier: Bool {
-		sessionMode == .onKeyRelease && !state.isSearching && !state.isShowingSettings
+		sessionMode == .onKeyRelease && !state.isShowingSettings
 	}
 
 	/// The modifier's actual state, read from the event system rather than inferred from
@@ -184,6 +194,7 @@ final class SwitcherController {
 		generation += 1
 		let thisGeneration = generation
 		phase = .loading
+		scrollRemainder = 0
 		trace("begin gen=\(generation)")
 		sessionModifier = Settings.modifier
 		sessionMode = Settings.activationMode
@@ -193,7 +204,6 @@ final class SwitcherController {
 		presentWhenLoaded = false
 		mouseSelectionInitialLocation = nil
 		state.searchQuery = ""
-		state.isSearching = false
 		startWatchdog()
 
 		loader.load(includeWindowless: Settings.showWindowlessApps) { [weak self] snapshot in
@@ -270,7 +280,6 @@ final class SwitcherController {
 		state.images = images
 		state.tints = tints
 		state.searchQuery = ""
-		state.isSearching = false
 		state.selectedID = windows[min(1, windows.count - 1)].id
 		if Settings.layout == .grouped {
 			state.allWindows = WindowGroup.groupedOrder(windows)
@@ -315,6 +324,66 @@ final class SwitcherController {
 		guard !windows.isEmpty else { return }
 		let index = windows.firstIndex { $0.id == state.selectedID } ?? 0
 		state.selectedID = windows[(index + delta + windows.count) % windows.count].id
+	}
+
+	/// Moves the selection by position on screen: left and right stay on the current row
+	/// (wrapping at its ends), up and down go to the nearest card in the row above or below
+	/// and stop at the first and last rows. Presses made while loading count as steps.
+	private func move(_ direction: ArrowDirection) {
+		if phase == .loading {
+			pendingSteps += (direction == .left || direction == .up) ? -1 : 1
+			return
+		}
+		guard phase == .active,
+			let current = state.windows.firstIndex(where: { $0.id == state.selectedID })
+		else { return }
+		let rows = panel.navigationRows()
+		guard let rowIndex = rows.firstIndex(where: { $0.contains { $0.index == current } }),
+			let column = rows[rowIndex].firstIndex(where: { $0.index == current })
+		else { return step(direction == .left || direction == .up ? -1 : 1) }
+		let row = rows[rowIndex]
+
+		let target: Int?
+		switch direction {
+		case .left, .right:
+			let delta = direction == .left ? -1 : 1
+			target = row.count > 1 ? row[(column + delta + row.count) % row.count].index : nil
+		case .up, .down:
+			let next = rowIndex + (direction == .up ? -1 : 1)
+			if rows.indices.contains(next) {
+				let x = row[column].x
+				target = rows[next].min(by: { abs($0.x - x) < abs($1.x - x) })?.index
+			} else {
+				target = nil
+			}
+		}
+		if let target, state.windows.indices.contains(target) {
+			state.selectedID = state.windows[target].id
+		}
+	}
+
+	/// The scroll wheel steps through windows: down (or right) for the next one, up (or
+	/// left) for the previous, wrapping like Tab. A mouse wheel moves one window per notch;
+	/// trackpad scrolling moves one per `scrollStepDistance` points, and the momentum
+	/// after lifting the fingers is ignored so a flick can't run away.
+	private func scrolled(_ event: CGEvent) {
+		guard event.getIntegerValueField(.scrollWheelEventMomentumPhase) == 0 else { return }
+		let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
+		if continuous {
+			let vertical = event.getDoubleValueField(.scrollWheelEventPointDeltaAxis1)
+			let horizontal = event.getDoubleValueField(.scrollWheelEventPointDeltaAxis2)
+			let delta = abs(vertical) >= abs(horizontal) ? vertical : horizontal
+			scrollRemainder += delta
+			while abs(scrollRemainder) >= scrollStepDistance {
+				step(scrollRemainder > 0 ? -1 : 1)
+				scrollRemainder -= scrollRemainder > 0 ? scrollStepDistance : -scrollStepDistance
+			}
+		} else {
+			let lines = event.getIntegerValueField(.scrollWheelEventDeltaAxis1)
+			guard lines != 0 else { return }
+			scrollRemainder = 0
+			step(lines > 0 ? -1 : 1)
+		}
 	}
 
 	/// Next window of the highlighted app (DockDoor's in-switcher app-window stepping).

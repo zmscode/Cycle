@@ -8,7 +8,7 @@ enum Theme {
 		static let padding: CGFloat = 16
 		static let spacing: CGFloat = 6
 		static let searchHeight: CGFloat = 44
-		/// With the search bar off there's no top row at all.
+		/// With nothing typed there's no top row at all.
 		static let compactHeaderHeight: CGFloat = 0
 		static let minWidth: CGFloat = 420
 		/// How much the rest of the screen darkens while the switcher is open.

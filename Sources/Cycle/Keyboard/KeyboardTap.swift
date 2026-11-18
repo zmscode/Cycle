@@ -21,6 +21,8 @@ final class KeyboardTap {
 		let mask: CGEventMask =
 			(1 << CGEventType.keyDown.rawValue) | (1 << CGEventType.keyUp.rawValue)
 			| (1 << CGEventType.flagsChanged.rawValue)
+			// Scrolling steps through windows while the switcher is open.
+			| (1 << CGEventType.scrollWheel.rawValue)
 		let callback: CGEventTapCallBack = { _, type, event, refcon in
 			guard let refcon else { return Unmanaged.passUnretained(event) }
 			let me = Unmanaged<KeyboardTap>.fromOpaque(refcon).takeUnretainedValue()

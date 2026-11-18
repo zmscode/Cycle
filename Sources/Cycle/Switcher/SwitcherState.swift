@@ -11,7 +11,6 @@ final class SwitcherState {
 	var images: [CGWindowID: NSImage] = [:]
 	/// Average colour of each thumbnail; the card is tinted with it.
 	var tints: [CGWindowID: NSColor] = [:]
-	var isSearching = false
 	/// The settings panel is open under the gear; it holds the session open, as search does.
 	var isShowingSettings = false
 	/// The session's windows most recent first, before any grouping, so the layout can

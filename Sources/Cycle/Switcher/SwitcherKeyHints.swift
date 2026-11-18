@@ -5,9 +5,9 @@ struct SwitcherKeyHints: View {
 	var body: some View {
 		HStack(spacing: 14) {
 			KeyHint(key: "⇥", label: "Next")
-			KeyHint(key: "W", label: "Close")
-			KeyHint(key: "M", label: "Minimize")
-			KeyHint(key: "Q", label: "Quit")
+			KeyHint(key: "↑↓", label: "Move")
+			KeyHint(key: "⎋", label: "Cancel")
+			Text("Type to filter")
 		}
 		.font(.caption)
 		.foregroundStyle(.secondary)

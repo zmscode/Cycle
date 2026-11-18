@@ -10,7 +10,7 @@ struct TrafficLightButton: View {
 	var body: some View {
 		Button(action.title, systemImage: action.systemImage, action: perform)
 			.buttonStyle(TrafficLightButtonStyle(color: action.color, showsGlyph: showsGlyph))
-			.help(action.helpText)
+			.help(action.title)
 	}
 
 	private func perform() {

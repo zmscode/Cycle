@@ -47,15 +47,7 @@ enum Key {
 	static let up = CGKeyCode(kVK_UpArrow)
 	static let down = CGKeyCode(kVK_DownArrow)
 	static let grave = CGKeyCode(kVK_ANSI_Grave)
-	static let w = CGKeyCode(kVK_ANSI_W)
-	static let q = CGKeyCode(kVK_ANSI_Q)
-	static let m = CGKeyCode(kVK_ANSI_M)
-	static let h = CGKeyCode(kVK_ANSI_H)
-	static let f = CGKeyCode(kVK_ANSI_F)
 	static let delete = CGKeyCode(kVK_Delete)
-	/// Opens the search field while the switcher is up (DockDoor's
-	/// `windowSwitcherSearchTriggerKey`, shown as "Press , to search windows").
-	static let searchTrigger = CGKeyCode(kVK_ANSI_Comma)
 }
 
 /// User settings, stored in UserDefaults under DockDoor's key names where one exists.
@@ -99,13 +91,6 @@ enum Settings {
 	}
 
 	nonisolated(unsafe) static var layoutOverride: SwitcherStyle?
-
-	/// The search bar along the top of the switcher. Off leaves a slim row with just the
-	/// settings button; `,` still opens search.
-	static var showSearchBar: Bool {
-		get { flag("windowSwitcherSearchEnabled", default: true) }
-		set { defaults.set(newValue, forKey: "windowSwitcherSearchEnabled") }
-	}
 
 	static var showWindowlessApps: Bool {
 		get { flag("windowSwitcherShowWindowlessApps", default: false) }

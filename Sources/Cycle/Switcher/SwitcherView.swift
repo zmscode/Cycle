@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The panel: the search bar along the top (when it's on) and the windows below, on one sheet of dark glass, like the system's own switcher.
+/// The panel: what's been typed along the top (only while filtering) and the windows below, on one sheet of dark glass, like the system's own switcher.
 struct SwitcherView: View {
 	let state: SwitcherState
 	let controller: SwitcherController
@@ -9,11 +9,7 @@ struct SwitcherView: View {
 	var body: some View {
 		VStack(spacing: 0) {
 			if metrics.showsSearchBar {
-				SearchBar(
-					isSearching: state.isSearching,
-					query: state.searchQuery,
-					windowCount: state.windows.count,
-					previewsAllowed: Permissions.shared.screenRecording)
+				QueryBar(query: state.searchQuery, matchCount: state.windows.count)
 				.padding(.horizontal, Theme.Panel.padding + 4)
 				.frame(height: metrics.headerHeight)
 				Divider()

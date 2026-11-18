@@ -149,4 +149,37 @@ struct SwitcherLayout {
 			panelSize: CGSize(width: width, height: height + Theme.Panel.searchHeight),
 			scrolls: scrolls)
 	}
+
+	// MARK: Arrow-key movement
+
+	/// Every window as it's drawn: one array per visual row, left to right, with each
+	/// card's horizontal centre so up and down can land on the nearest card.
+	func navigationRows(windowCount: Int) -> [[NavigationStop]] {
+		switch style {
+		case .grid:
+			let pitch = card.width + Theme.Panel.spacing
+			return rows.map { row in
+				row.enumerated().map { column, index in
+					NavigationStop(index: index, x: CGFloat(column) * pitch + card.width / 2)
+				}
+			}
+		case .list:
+			return (0..<windowCount).map { [NavigationStop(index: $0, x: 0)] }
+		case .grouped:
+			let tile = thumb.width + Theme.Card.inset * 2
+			return groupRows.map { row in
+				var stops: [NavigationStop] = []
+				var groupX: CGFloat = 0
+				for group in row {
+					var x = groupX + Theme.Group.padding
+					for index in group.indices {
+						stops.append(NavigationStop(index: index, x: x + tile / 2))
+						x += tile + Theme.Group.tileSpacing
+					}
+					groupX += Self.groupWidth(group, thumb: thumb) + Theme.Panel.spacing * 2
+				}
+				return stops
+			}
+		}
+	}
 }

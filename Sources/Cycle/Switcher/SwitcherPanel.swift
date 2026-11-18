@@ -36,6 +36,23 @@ final class SwitcherPanel {
 	/// The settings button's frame on screen; settings open beside it.
 	var gearFrame: CGRect? { gearPanel?.isVisible == true ? gearPanel?.frame : nil }
 
+	/// The layout last drawn, so arrow keys move through what's on screen.
+	private var metrics: SwitcherLayout?
+
+	/// Windows by visual row for arrow-key movement. Before the panel has been drawn (a
+	/// quick tap) it measures the layout it would draw.
+	func navigationRows() -> [[NavigationStop]] {
+		(metrics ?? measure()).navigationRows(windowCount: state.windows.count)
+	}
+
+	private func measure() -> SwitcherLayout {
+		let visible = Self.screenUnderPointer().visibleFrame
+		return SwitcherLayout.metrics(
+			for: state.windows, style: Settings.layout,
+			maxSize: CGSize(width: visible.width * 0.9, height: visible.height * 0.8),
+			showsSearchBar: !state.searchQuery.isEmpty)
+	}
+
 	/// The top row's height in the current layout.
 	private(set) var headerHeight: CGFloat = Theme.Panel.searchHeight
 
@@ -92,12 +109,9 @@ final class SwitcherPanel {
 	/// Re-measure for the current window list and recentre.
 	func relayout() {
 		guard let panel, let host else { return }
-		let screen = Self.screenUnderPointer()
-		let visible = screen.visibleFrame
-		let metrics = SwitcherLayout.metrics(
-			for: state.windows, style: Settings.layout,
-			maxSize: CGSize(width: visible.width * 0.9, height: visible.height * 0.8),
-			showsSearchBar: Settings.showSearchBar || state.isSearching)
+		let visible = Self.screenUnderPointer().visibleFrame
+		let metrics = measure()
+		self.metrics = metrics
 		host.rootView = SwitcherView(state: state, controller: controller, metrics: metrics)
 		headerHeight = metrics.headerHeight
 		let size = metrics.fullSize

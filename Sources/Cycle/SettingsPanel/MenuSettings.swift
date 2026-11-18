@@ -43,13 +43,6 @@ final class MenuSettings {
 		}
 	}
 
-	var showSearchBar = Settings.showSearchBar {
-		didSet {
-			Settings.showSearchBar = showSearchBar
-			onChange?()
-		}
-	}
-
 	var showWindowlessApps = Settings.showWindowlessApps {
 		didSet {
 			Settings.showWindowlessApps = showWindowlessApps

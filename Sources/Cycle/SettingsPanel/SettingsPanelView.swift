@@ -35,12 +35,6 @@ struct SettingsPanelView: View {
 						title: "Windowless", subtitle: "Apps",
 						systemImage: "app.dashed", isOn: $settings.showWindowlessApps)
 				}
-				GridRow {
-					ToggleTile(
-						title: "Search Bar", subtitle: "Press , to search either way",
-						systemImage: "magnifyingglass", isOn: $settings.showSearchBar)
-						.gridCellColumns(2)
-				}
 			}
 			PermissionsTile(
 				permissions: permissions,
