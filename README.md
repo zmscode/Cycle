@@ -3,6 +3,17 @@
 A ⌘Tab window switcher for macOS 26+, modelled on DockDoor Pro's Alt-Tab switcher. It switches
 between windows, not apps, with live thumbnails on Liquid Glass cards.
 
+## Install
+
+```bash
+brew install --cask zmscode/cycle/cycle
+```
+
+Cycle isn't notarized yet, so macOS may refuse to open it the first time: approve it once in
+System Settings > Privacy & Security > Open Anyway, or run
+`xattr -dr com.apple.quarantine /Applications/Cycle.app`. It needs macOS 26 or later on Apple
+silicon.
+
 ## Use
 
 | Key                   | Does                                                          |
@@ -47,6 +58,13 @@ relaunch Cycle, which macOS needs before captures work.
 The build is ad hoc signed with a designated requirement of its bundle id, so grants survive
 rebuilds. `just reset-permissions` clears them. Set `CYCLE_SIGN_IDENTITY` to sign with a
 certificate instead.
+
+## Releasing
+
+Bump `VERSION`, commit, then `just release`: it builds and zips the app, publishes
+`v<version>` on GitHub with the zip, and updates the cask in
+[zmscode/homebrew-cycle](https://github.com/zmscode/homebrew-cycle) with the new version and
+checksum. `Casks/cycle.rb` here is the template it fills in.
 
 ## Icons
 
