@@ -23,7 +23,9 @@ struct WindowGrid: View {
 										window: window,
 										image: state.images[window.id],
 										isSelected: window.id == state.selectedID,
-										metrics: metrics,
+										thumbSize: metrics.thumb(at: index),
+										slot: CGSize(width: metrics.slotWidth(at: index), height: metrics.boxHeight),
+										cardSize: CGSize(width: metrics.cardWidth(at: index), height: metrics.cardHeight),
 										selection: selection,
 										controller: controller)
 									.id(window.id)

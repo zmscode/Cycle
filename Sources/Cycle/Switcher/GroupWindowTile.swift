@@ -6,7 +6,10 @@ struct GroupWindowTile: View {
 	let window: SwitcherWindow
 	let image: NSImage?
 	let isSelected: Bool
+	/// The preview's own size, from the window's shape and relative size.
 	let thumb: CGSize
+	/// The area the preview is centred in; shared height across the row so titles align.
+	let slot: CGSize
 	let selection: Namespace.ID
 	let controller: SwitcherController
 
@@ -18,20 +21,22 @@ struct GroupWindowTile: View {
 	var body: some View {
 		VStack(spacing: Theme.Card.labelGap) {
 			WindowThumbnail(window: window, image: image, size: thumb, isSelected: isSelected)
-				.overlay(alignment: .topLeading) {
+				// A narrow (portrait or small) preview centres the controls along its top.
+				.overlay(alignment: thumb.width < Theme.Controls.capsuleWidth + 16 ? .top : .topLeading) {
 					if !window.isWindowless && (isSelected || isHovering) {
 						WindowControls(onAction: perform)
 							.padding(6)
 							.transition(.opacity)
 					}
 				}
+				.frame(width: slot.width, height: slot.height)
 			Text(window.isWindowless ? "Open App" : window.displayTitle)
 				.font(.caption)
 				.bold(isSelected)
 				.foregroundStyle(isSelected ? .primary : .secondary)
 				.lineLimit(1)
 				.truncationMode(.middle)
-				.frame(width: thumb.width, height: Theme.Group.labelHeight)
+				.frame(width: slot.width, height: Theme.Group.labelHeight)
 		}
 		.padding([.horizontal, .top], Theme.Card.inset)
 		.padding(.bottom, Theme.Card.inset / 2)

@@ -10,27 +10,29 @@ enum Demo {
 		let title: String
 		let accent: NSColor
 		let dark: Bool
+		/// The made-up window's size, so the demo shows varied shapes and sizes.
+		var size = CGSize(width: 1440, height: 900)
 	}
 
 	/// Most recent first, as a session lists them; Safari and Notes have two windows each
 	/// so the grouped layout has something to group.
 	private static let mocks: [Mock] = [
 		Mock(app: "Safari", path: "/Applications/Safari.app", title: "Start Page",
-			 accent: NSColor(srgbRed: 0.20, green: 0.52, blue: 1.0, alpha: 1), dark: false),
+			 accent: NSColor(srgbRed: 0.20, green: 0.52, blue: 1.0, alpha: 1), dark: false, size: CGSize(width: 1600, height: 1000)),
 		Mock(app: "Notes", path: "/System/Applications/Notes.app", title: "Weekend Plans",
-			 accent: NSColor(srgbRed: 0.98, green: 0.78, blue: 0.20, alpha: 1), dark: false),
+			 accent: NSColor(srgbRed: 0.98, green: 0.78, blue: 0.20, alpha: 1), dark: false, size: CGSize(width: 640, height: 900)),
 		Mock(app: "Music", path: "/System/Applications/Music.app", title: "Listen Now",
-			 accent: NSColor(srgbRed: 0.98, green: 0.24, blue: 0.36, alpha: 1), dark: true),
+			 accent: NSColor(srgbRed: 0.98, green: 0.24, blue: 0.36, alpha: 1), dark: true, size: CGSize(width: 1300, height: 820)),
 		Mock(app: "Safari", path: "/Applications/Safari.app", title: "Apple Developer",
-			 accent: NSColor(srgbRed: 0.35, green: 0.40, blue: 0.95, alpha: 1), dark: true),
+			 accent: NSColor(srgbRed: 0.35, green: 0.40, blue: 0.95, alpha: 1), dark: true, size: CGSize(width: 1100, height: 760)),
 		Mock(app: "Mail", path: "/System/Applications/Mail.app", title: "Inbox",
-			 accent: NSColor(srgbRed: 0.18, green: 0.62, blue: 0.98, alpha: 1), dark: false),
+			 accent: NSColor(srgbRed: 0.18, green: 0.62, blue: 0.98, alpha: 1), dark: false, size: CGSize(width: 1500, height: 940)),
 		Mock(app: "Notes", path: "/System/Applications/Notes.app", title: "Recipes",
-			 accent: NSColor(srgbRed: 0.95, green: 0.62, blue: 0.18, alpha: 1), dark: false),
+			 accent: NSColor(srgbRed: 0.95, green: 0.62, blue: 0.18, alpha: 1), dark: false, size: CGSize(width: 560, height: 520)),
 		Mock(app: "Calendar", path: "/System/Applications/Calendar.app", title: "November",
-			 accent: NSColor(srgbRed: 0.96, green: 0.30, blue: 0.25, alpha: 1), dark: true),
+			 accent: NSColor(srgbRed: 0.96, green: 0.30, blue: 0.25, alpha: 1), dark: true, size: CGSize(width: 1000, height: 780)),
 		Mock(app: "Maps", path: "/System/Applications/Maps.app", title: "Guides",
-			 accent: NSColor(srgbRed: 0.24, green: 0.74, blue: 0.42, alpha: 1), dark: false),
+			 accent: NSColor(srgbRed: 0.24, green: 0.74, blue: 0.42, alpha: 1), dark: false, size: CGSize(width: 520, height: 860)),
 	]
 
 	private static var backdrop: NSWindow?
@@ -51,7 +53,7 @@ enum Demo {
 			let id = CGWindowID(900_000 + i)
 			var window = SwitcherWindow(
 				id: id, pid: -1, appName: mock.app, bundleID: nil, title: mock.title,
-				bounds: CGRect(x: 0, y: 0, width: 1440, height: 900), axElement: nil,
+				bounds: CGRect(origin: .zero, size: mock.size), axElement: nil,
 				isMinimized: false, isAppHidden: false, isOnOtherSpace: false, isWindowless: false)
 			window.iconOverride = NSWorkspace.shared.icon(forFile: mock.path)
 			windows.append(window)
@@ -91,9 +93,15 @@ enum Demo {
 	}
 
 	/// Draws a simple window: toolbar, sidebar, and content blocks in the app's accent.
+	/// Drawn on a 1440×900 canvas, then stretched to the mock's size.
 	private static func mockWindow(_ mock: Mock) -> NSImage {
 		let size = NSSize(width: 1440, height: 900)
-		return NSImage(size: size, flipped: true) { rect in
+		return NSImage(size: mock.size, flipped: true) { target in
+			NSAffineTransform(transform: {
+				let t = AffineTransform(scaleByX: target.width / size.width, byY: target.height / size.height)
+				return t
+			}()).concat()
+			let rect = NSRect(origin: .zero, size: size)
 			let bg = mock.dark ? NSColor(white: 0.12, alpha: 1) : NSColor(white: 0.98, alpha: 1)
 			let panel = mock.dark ? NSColor(white: 0.18, alpha: 1) : NSColor(white: 0.93, alpha: 1)
 			let line = mock.dark ? NSColor(white: 0.30, alpha: 1) : NSColor(white: 0.82, alpha: 1)

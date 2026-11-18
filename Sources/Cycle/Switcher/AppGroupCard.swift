@@ -26,11 +26,13 @@ struct AppGroupCard: View {
 			}
 			HStack(spacing: Theme.Group.tileSpacing) {
 				ForEach(windows) { window in
+					let index = state.windows.firstIndex { $0.id == window.id } ?? 0
 					GroupWindowTile(
 						window: window,
 						image: state.images[window.id],
 						isSelected: window.id == state.selectedID,
-						thumb: metrics.thumb,
+						thumb: metrics.thumb(at: index),
+						slot: CGSize(width: metrics.slotWidth(at: index), height: metrics.boxHeight),
 						selection: selection,
 						controller: controller)
 					.id(window.id)
@@ -39,8 +41,8 @@ struct AppGroupCard: View {
 		}
 		.padding(Theme.Group.padding)
 		.frame(
-			width: SwitcherLayout.groupWidth(group, thumb: metrics.thumb),
-			height: SwitcherLayout.groupHeight(thumb: metrics.thumb),
+			width: metrics.groupWidth(group),
+			height: metrics.groupHeight,
 			alignment: .topLeading)
 		.insetSurface(cornerRadius: Theme.Group.radius, isHighlighted: containsSelection)
 		.overlay {

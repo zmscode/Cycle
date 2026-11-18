@@ -5,13 +5,17 @@ import SwiftUI
 struct WindowPreviewPane: View {
 	let window: SwitcherWindow?
 	let image: NSImage?
-	let thumb: CGSize
+	/// The space for the preview; the window's own shape is fitted into it.
+	let previewBox: CGSize
 	let controller: SwitcherController
 
 	var body: some View {
 		VStack(alignment: .leading, spacing: 14) {
 			if let window {
-				WindowThumbnail(window: window, image: image, size: thumb, isSelected: false)
+				WindowThumbnail(
+					window: window, image: image,
+					size: SwitcherLayout.fit(aspect: SwitcherLayout.aspect(of: window), in: previewBox),
+					isSelected: false)
 					.overlay(alignment: .topLeading) {
 						if !window.isWindowless {
 							WindowControls(onAction: perform)

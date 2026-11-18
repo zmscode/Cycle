@@ -7,7 +7,11 @@ struct WindowCard: View {
 	let window: SwitcherWindow
 	let image: NSImage?
 	let isSelected: Bool
-	let metrics: SwitcherLayout
+	/// The preview's own size, from the window's shape and relative size.
+	let thumbSize: CGSize
+	/// The area the preview is centred in; shared height across the row so labels align.
+	let slot: CGSize
+	let cardSize: CGSize
 	let selection: Namespace.ID
 	let controller: SwitcherController
 
@@ -18,20 +22,22 @@ struct WindowCard: View {
 
 	var body: some View {
 		VStack(spacing: Theme.Card.labelGap) {
-			WindowThumbnail(window: window, image: image, size: metrics.thumb, isSelected: isSelected)
-				.overlay(alignment: .topLeading) {
+			WindowThumbnail(window: window, image: image, size: thumbSize, isSelected: isSelected)
+				// A narrow (portrait or small) preview centres the controls along its top.
+				.overlay(alignment: thumbSize.width < Theme.Controls.capsuleWidth + 16 ? .top : .topLeading) {
 					if !window.isWindowless && (isSelected || isHovering) {
 						WindowControls(onAction: perform)
 							.padding(8)
 							.transition(.opacity)
 					}
 				}
+				.frame(width: slot.width, height: slot.height)
 			WindowCardLabel(window: window, isSelected: isSelected)
-				.frame(width: metrics.thumb.width, height: Theme.Card.labelHeight, alignment: .top)
+				.frame(width: slot.width, height: Theme.Card.labelHeight, alignment: .top)
 		}
 		.padding([.horizontal, .top], Theme.Card.inset)
 		.padding(.bottom, Theme.Card.inset / 2)
-		.frame(width: metrics.card.width, height: metrics.card.height, alignment: .top)
+		.frame(width: cardSize.width, height: cardSize.height, alignment: .top)
 		.background {
 			if isSelected {
 				SelectionPlate(cornerRadius: Theme.Card.plateRadius)

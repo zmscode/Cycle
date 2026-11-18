@@ -1,25 +1,35 @@
 import CoreGraphics
 
 /// Sizes for the current layout, computed up front so the panel can be sized exactly.
+/// Every window's preview takes its window's aspect ratio and is scaled by its size
+/// relative to the largest window, so a portrait window gets a portrait preview and a
+/// small window looks smaller. Cards in a row share one preview-area height, so their
+/// labels line up.
 struct SwitcherLayout {
 	let style: SwitcherStyle
-	/// Grid: card indexes per row. Grouped: unused.
+	/// Grid: card indexes per row.
 	let rows: [[Int]]
 	/// Grouped: groups per row.
 	let groupRows: [[WindowGroup]]
-	let card: CGSize
-	let thumb: CGSize
-	/// The content area under the search bar.
+	/// Each window's preview size, by index into the session's window list.
+	let thumbs: [CGSize]
+	/// Each window's card content width (at least the preview, never too narrow for a
+	/// label), by index.
+	let slots: [CGFloat]
+	/// The preview area's height: the tallest a preview can be.
+	let boxHeight: CGFloat
+	/// List: the detail pane's preview box.
+	let previewBox: CGSize
+	/// The content area under the top row.
 	let bodySize: CGSize
-	let panelSize: CGSize
 	let scrolls: Bool
-	/// The top row's height: the full search bar, or a slim strip with just the gear.
+	/// The top row's height: the query row while filtering, otherwise nothing.
 	var headerHeight: CGFloat = Theme.Panel.searchHeight
 	var showsSearchBar: Bool { headerHeight == Theme.Panel.searchHeight }
 
 	static let empty = SwitcherLayout(
-		style: .grid, rows: [], groupRows: [], card: .zero, thumb: .zero,
-		bodySize: .zero, panelSize: .zero, scrolls: false)
+		style: .grid, rows: [], groupRows: [], thumbs: [], slots: [], boxHeight: 0,
+		previewBox: .zero, bodySize: .zero, scrolls: false)
 
 	static func metrics(
 		for windows: [SwitcherWindow], style: SwitcherStyle, maxSize: CGSize, showsSearchBar: Bool
@@ -28,7 +38,7 @@ struct SwitcherLayout {
 		let maxBody = CGSize(width: maxSize.width, height: maxSize.height - header)
 		var layout: SwitcherLayout
 		switch style {
-		case .grid: layout = grid(count: windows.count, maxBody: maxBody)
+		case .grid: layout = grid(windows, maxBody: maxBody)
 		case .list: layout = list(count: windows.count, maxBody: maxBody)
 		case .grouped: layout = grouped(windows, maxBody: maxBody)
 		}
@@ -41,38 +51,111 @@ struct SwitcherLayout {
 		CGSize(width: bodySize.width, height: bodySize.height + headerHeight)
 	}
 
-	// MARK: Grid
-
-	private static func grid(count: Int, maxBody: CGSize) -> SwitcherLayout {
-		// Shrink thumbnails until everything fits, but never below a readable size.
-		for height in stride(from: Theme.Card.maxThumbHeight, through: Theme.Card.minThumbHeight, by: -6) {
-			let layout = buildGrid(count, thumbHeight: height, maxBody: maxBody, scrolls: false)
-			if layout.bodySize.height <= maxBody.height { return layout }
-		}
-		return buildGrid(count, thumbHeight: Theme.Card.minThumbHeight, maxBody: maxBody, scrolls: true)
+	func thumb(at index: Int) -> CGSize {
+		thumbs.indices.contains(index) ? thumbs[index] : CGSize(width: boxHeight * 1.3, height: boxHeight)
 	}
 
-	private static func buildGrid(_ count: Int, thumbHeight: CGFloat, maxBody: CGSize, scrolls: Bool) -> SwitcherLayout {
+	func slotWidth(at index: Int) -> CGFloat {
+		slots.indices.contains(index) ? slots[index] : boxHeight * 1.3
+	}
+
+	/// A grid card: the slot plus the selection plate's inset.
+	func cardWidth(at index: Int) -> CGFloat {
+		slotWidth(at: index) + Theme.Card.inset * 2
+	}
+
+	var cardHeight: CGFloat {
+		Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Card.labelHeight + Theme.Card.inset / 2
+	}
+
+	// MARK: Preview sizes
+
+	/// A window's aspect ratio, kept within limits so very thin windows stay legible.
+	static func aspect(of window: SwitcherWindow) -> CGFloat {
+		guard !window.isWindowless, window.bounds.width > 0, window.bounds.height > 0 else { return 1.3 }
+		return min(max(window.bounds.width / window.bounds.height, Theme.Card.minAspect), Theme.Card.maxAspect)
+	}
+
+	/// The largest size with `aspect` that fits in `box`.
+	static func fit(aspect: CGFloat, in box: CGSize) -> CGSize {
+		let width = min(box.width, box.height * aspect)
+		return CGSize(width: width.rounded(), height: (width / aspect).rounded())
+	}
+
+	/// Preview sizes for every window with previews up to `boxHeight` tall. Each window's
+	/// shape fits a box `boxHeight` tall and up to `Theme.Card.boxAspect` times as wide,
+	/// then shrinks by its area relative to the largest window, gently (a power curve)
+	/// and never below `Theme.Card.minScale`.
+	static func previewSizes(_ windows: [SwitcherWindow], boxHeight: CGFloat) -> (thumbs: [CGSize], slots: [CGFloat]) {
+		let areas = windows.map { $0.isWindowless ? 0 : $0.bounds.width * $0.bounds.height }
+		let largest = max(areas.max() ?? 0, 1)
+		let box = CGSize(width: boxHeight * Theme.Card.boxAspect, height: boxHeight)
+		var thumbs: [CGSize] = []
+		var slots: [CGFloat] = []
+		for (window, area) in zip(windows, areas) {
+			let fitted = fit(aspect: aspect(of: window), in: box)
+			let scale = window.isWindowless
+				? Theme.Card.windowlessScale
+				: min(max(pow(area / largest, Theme.Card.scaleCurve), Theme.Card.minScale), 1)
+			let size = CGSize(width: (fitted.width * scale).rounded(), height: (fitted.height * scale).rounded())
+			thumbs.append(size)
+			slots.append(max(size.width, Theme.Card.minSlotWidth))
+		}
+		return (thumbs, slots)
+	}
+
+	// MARK: Grid
+
+	private static func grid(_ windows: [SwitcherWindow], maxBody: CGSize) -> SwitcherLayout {
+		// Shrink previews until everything fits, but never below a readable size.
+		for height in stride(from: Theme.Card.maxThumbHeight, through: Theme.Card.minThumbHeight, by: -6) {
+			let layout = buildGrid(windows, boxHeight: height, maxBody: maxBody, scrolls: false)
+			if layout.bodySize.height <= maxBody.height { return layout }
+		}
+		return buildGrid(windows, boxHeight: Theme.Card.minThumbHeight, maxBody: maxBody, scrolls: true)
+	}
+
+	private static func buildGrid(
+		_ windows: [SwitcherWindow], boxHeight: CGFloat, maxBody: CGSize, scrolls: Bool
+	) -> SwitcherLayout {
 		let padding = Theme.Panel.padding
 		let spacing = Theme.Panel.spacing
-		let inset = Theme.Card.inset
-		let thumb = CGSize(width: (thumbHeight * Theme.Card.thumbAspect).rounded(), height: thumbHeight)
-		let card = CGSize(
-			width: thumb.width + inset * 2,
-			height: inset + thumb.height + Theme.Card.labelGap + Theme.Card.labelHeight + inset / 2)
-		let perRow = max(1, Int((maxBody.width - padding * 2 + spacing) / (card.width + spacing)))
-		let columns = min(perRow, max(count, 1))
-		let rows = stride(from: 0, to: count, by: perRow).map { Array($0..<min($0 + perRow, count)) }
-		let width = max(
-			CGFloat(columns) * card.width + CGFloat(columns - 1) * spacing + padding * 2,
-			Theme.Panel.minWidth)
-		var height = CGFloat(rows.count) * card.height + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
+		let (thumbs, slots) = previewSizes(windows, boxHeight: boxHeight)
+		let cardWidths = slots.map { $0 + Theme.Card.inset * 2 }
+		let rows = flow(cardWidths, spacing: spacing, available: maxBody.width - padding * 2)
+		let widest = rows.map { rowWidth($0.map { cardWidths[$0] }, spacing: spacing) }.max() ?? 0
+		let width = max(widest + padding * 2, Theme.Panel.minWidth)
+		let cardHeight = Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Card.labelHeight
+			+ Theme.Card.inset / 2
+		var height = CGFloat(rows.count) * cardHeight + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
 		if scrolls { height = min(height, maxBody.height) }
 		return SwitcherLayout(
-			style: .grid, rows: rows, groupRows: [], card: card, thumb: thumb,
-			bodySize: CGSize(width: width, height: height),
-			panelSize: CGSize(width: width, height: height + Theme.Panel.searchHeight),
-			scrolls: scrolls)
+			style: .grid, rows: rows, groupRows: [], thumbs: thumbs, slots: slots, boxHeight: boxHeight,
+			previewBox: .zero, bodySize: CGSize(width: width, height: height), scrolls: scrolls)
+	}
+
+	/// Breaks items of the given widths into rows that fit `available`.
+	private static func flow(_ widths: [CGFloat], spacing: CGFloat, available: CGFloat) -> [[Int]] {
+		var rows: [[Int]] = []
+		var current: [Int] = []
+		var used: CGFloat = 0
+		for (index, width) in widths.enumerated() {
+			let added = current.isEmpty ? width : width + spacing
+			if used + added > available, !current.isEmpty {
+				rows.append(current)
+				current = [index]
+				used = width
+			} else {
+				current.append(index)
+				used += added
+			}
+		}
+		if !current.isEmpty { rows.append(current) }
+		return rows
+	}
+
+	private static func rowWidth(_ widths: [CGFloat], spacing: CGFloat) -> CGFloat {
+		widths.reduce(0, +) + CGFloat(max(widths.count - 1, 0)) * spacing
 	}
 
 	// MARK: List
@@ -82,14 +165,12 @@ struct SwitcherLayout {
 		let maxRows = CGFloat(Theme.List.maxVisibleRows) * Theme.List.rowHeight + Theme.Panel.padding * 2
 		let height = min(max(rowsHeight, Theme.List.minHeight), min(maxRows, maxBody.height))
 		let width = min(Theme.List.listWidth + Theme.List.previewWidth, maxBody.width)
-		let previewThumb = CGSize(
-			width: Theme.List.previewWidth - Theme.Panel.padding * 2,
-			height: ((Theme.List.previewWidth - Theme.Panel.padding * 2) / Theme.Card.thumbAspect).rounded())
+		// The pane's preview box; each window's shape is fitted into it when shown.
+		let boxWidth = Theme.List.previewWidth - Theme.Panel.padding * 2
+		let box = CGSize(width: boxWidth, height: min(boxWidth, height - Theme.List.previewChrome))
 		return SwitcherLayout(
-			style: .list, rows: [], groupRows: [], card: .zero, thumb: previewThumb,
-			bodySize: CGSize(width: width, height: height),
-			panelSize: CGSize(width: width, height: height + Theme.Panel.searchHeight),
-			scrolls: rowsHeight > height)
+			style: .list, rows: [], groupRows: [], thumbs: [], slots: [], boxHeight: 0,
+			previewBox: box, bodySize: CGSize(width: width, height: height), scrolls: rowsHeight > height)
 	}
 
 	// MARK: Grouped
@@ -97,57 +178,51 @@ struct SwitcherLayout {
 	private static func grouped(_ windows: [SwitcherWindow], maxBody: CGSize) -> SwitcherLayout {
 		let groups = WindowGroup.groups(for: windows)
 		for height in stride(from: Theme.Group.maxThumbHeight, through: Theme.Group.minThumbHeight, by: -6) {
-			let layout = buildGrouped(groups, thumbHeight: height, maxBody: maxBody, scrolls: false)
+			let layout = buildGrouped(windows, groups, boxHeight: height, maxBody: maxBody, scrolls: false)
 			if layout.bodySize.height <= maxBody.height { return layout }
 		}
-		return buildGrouped(groups, thumbHeight: Theme.Group.minThumbHeight, maxBody: maxBody, scrolls: true)
+		return buildGrouped(windows, groups, boxHeight: Theme.Group.minThumbHeight, maxBody: maxBody, scrolls: true)
 	}
 
-	/// Width of a group: its window tiles side by side, inside the group's padding.
-	static func groupWidth(_ group: WindowGroup, thumb: CGSize) -> CGFloat {
-		let count = CGFloat(max(group.indices.count, 1))
-		let tiles = count * (thumb.width + Theme.Card.inset * 2) + (count - 1) * Theme.Group.tileSpacing
-		return max(tiles, Theme.Group.minWidth) + Theme.Group.padding * 2
+	/// A tile inside a group: the slot plus the selection plate's inset.
+	func tileWidth(at index: Int) -> CGFloat {
+		slotWidth(at: index) + Theme.Card.inset * 2
 	}
 
-	static func groupHeight(thumb: CGSize) -> CGFloat {
+	/// A group's width: its window tiles side by side, inside the group's padding.
+	func groupWidth(_ group: WindowGroup) -> CGFloat {
+		Self.groupWidth(group, slots: slots)
+	}
+
+	var groupHeight: CGFloat {
 		Theme.Group.padding + Theme.Group.headerHeight + Theme.Group.headerGap
-			+ Theme.Card.inset + thumb.height + Theme.Card.labelGap + Theme.Group.labelHeight
+			+ Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Group.labelHeight
 			+ Theme.Card.inset / 2 + Theme.Group.padding
 	}
 
+	private static func groupWidth(_ group: WindowGroup, slots: [CGFloat]) -> CGFloat {
+		let tiles = group.indices.map { (slots.indices.contains($0) ? slots[$0] : 0) + Theme.Card.inset * 2 }
+		return max(rowWidth(tiles, spacing: Theme.Group.tileSpacing), Theme.Group.minWidth) + Theme.Group.padding * 2
+	}
+
 	private static func buildGrouped(
-		_ groups: [WindowGroup], thumbHeight: CGFloat, maxBody: CGSize, scrolls: Bool
+		_ windows: [SwitcherWindow], _ groups: [WindowGroup], boxHeight: CGFloat, maxBody: CGSize, scrolls: Bool
 	) -> SwitcherLayout {
 		let padding = Theme.Panel.padding
 		let spacing = Theme.Panel.spacing * 2
-		let thumb = CGSize(width: (thumbHeight * Theme.Card.thumbAspect).rounded(), height: thumbHeight)
-		let available = maxBody.width - padding * 2
-		var rows: [[WindowGroup]] = [[]]
-		var rowWidth: CGFloat = 0
-		var widest: CGFloat = 0
-		for group in groups {
-			let width = groupWidth(group, thumb: thumb)
-			let added = rows[rows.count - 1].isEmpty ? width : width + spacing
-			if rowWidth + added > available, !rows[rows.count - 1].isEmpty {
-				widest = max(widest, rowWidth)
-				rows.append([group])
-				rowWidth = width
-			} else {
-				rows[rows.count - 1].append(group)
-				rowWidth += added
-			}
-		}
-		widest = max(widest, rowWidth)
-		let rowHeight = groupHeight(thumb: thumb)
+		let (thumbs, slots) = previewSizes(windows, boxHeight: boxHeight)
+		let widths = groups.map { groupWidth($0, slots: slots) }
+		let rows = flow(widths, spacing: spacing, available: maxBody.width - padding * 2).map { $0.map { groups[$0] } }
+		let widest = rows.map { rowWidth($0.map { groupWidth($0, slots: slots) }, spacing: spacing) }.max() ?? 0
 		let width = max(widest + padding * 2, Theme.Panel.minWidth)
-		var height = CGFloat(rows.count) * rowHeight + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
+		let groupHeight = Theme.Group.padding + Theme.Group.headerHeight + Theme.Group.headerGap
+			+ Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Group.labelHeight
+			+ Theme.Card.inset / 2 + Theme.Group.padding
+		var height = CGFloat(rows.count) * groupHeight + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
 		if scrolls { height = min(height, maxBody.height) }
 		return SwitcherLayout(
-			style: .grouped, rows: [], groupRows: rows, card: .zero, thumb: thumb,
-			bodySize: CGSize(width: width, height: height),
-			panelSize: CGSize(width: width, height: height + Theme.Panel.searchHeight),
-			scrolls: scrolls)
+			style: .grouped, rows: [], groupRows: rows, thumbs: thumbs, slots: slots, boxHeight: boxHeight,
+			previewBox: .zero, bodySize: CGSize(width: width, height: height), scrolls: scrolls)
 	}
 
 	// MARK: Arrow-key movement
@@ -157,26 +232,28 @@ struct SwitcherLayout {
 	func navigationRows(windowCount: Int) -> [[NavigationStop]] {
 		switch style {
 		case .grid:
-			let pitch = card.width + Theme.Panel.spacing
 			return rows.map { row in
-				row.enumerated().map { column, index in
-					NavigationStop(index: index, x: CGFloat(column) * pitch + card.width / 2)
+				var x: CGFloat = 0
+				return row.map { index in
+					let width = cardWidth(at: index)
+					defer { x += width + Theme.Panel.spacing }
+					return NavigationStop(index: index, x: x + width / 2)
 				}
 			}
 		case .list:
 			return (0..<windowCount).map { [NavigationStop(index: $0, x: 0)] }
 		case .grouped:
-			let tile = thumb.width + Theme.Card.inset * 2
 			return groupRows.map { row in
 				var stops: [NavigationStop] = []
 				var groupX: CGFloat = 0
 				for group in row {
 					var x = groupX + Theme.Group.padding
 					for index in group.indices {
-						stops.append(NavigationStop(index: index, x: x + tile / 2))
-						x += tile + Theme.Group.tileSpacing
+						let width = tileWidth(at: index)
+						stops.append(NavigationStop(index: index, x: x + width / 2))
+						x += width + Theme.Group.tileSpacing
 					}
-					groupX += Self.groupWidth(group, thumb: thumb) + Theme.Panel.spacing * 2
+					groupX += groupWidth(group) + Theme.Panel.spacing * 2
 				}
 				return stops
 			}

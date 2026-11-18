@@ -38,7 +38,7 @@ struct WindowList: View {
 			WindowPreviewPane(
 				window: state.selected,
 				image: state.selectedID.flatMap { state.images[$0] },
-				thumb: metrics.thumb,
+				previewBox: metrics.previewBox,
 				controller: controller)
 		}
 		.frame(width: metrics.bodySize.width, height: metrics.bodySize.height)

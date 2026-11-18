@@ -22,6 +22,17 @@ enum Theme {
 		static let labelGap: CGFloat = 8
 		static let labelHeight: CGFloat = 36
 		static let thumbAspect: CGFloat = 1.6
+		/// A preview fits a box this many times wider than it is tall.
+		static let boxAspect: CGFloat = 1.9
+		/// Window aspect ratios are kept within these, so very thin windows stay legible.
+		static let minAspect: CGFloat = 0.45
+		static let maxAspect: CGFloat = 2.6
+		/// Size relative to the largest window: (area ratio) ^ scaleCurve, at least minScale.
+		static let scaleCurve: CGFloat = 0.35
+		static let minScale: CGFloat = 0.55
+		static let windowlessScale: CGFloat = 0.7
+		/// A card is never narrower than this, so its label stays readable.
+		static let minSlotWidth: CGFloat = 120
 		static let maxThumbHeight: CGFloat = 150
 		static let minThumbHeight: CGFloat = 96
 		static let iconSize: CGFloat = 18
@@ -36,6 +47,8 @@ enum Theme {
 		static let listWidth: CGFloat = 440
 		static let previewWidth: CGFloat = 400
 		static let minHeight: CGFloat = 320
+		/// Room in the detail pane for the title, app name and key hints under the preview.
+		static let previewChrome: CGFloat = 150
 	}
 
 	enum Group {
@@ -60,6 +73,9 @@ enum Theme {
 	}
 
 	enum Controls {
+		/// The capsule's width; previews narrower than this centre it instead of pinning it
+		/// to the top-left corner.
+		static let capsuleWidth: CGFloat = 104
 		static let diameter: CGFloat = 12
 		static let spacing: CGFloat = 6
 	}
