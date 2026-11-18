@@ -1,0 +1,7 @@
+.build/
+build/
+*.app
+.DS_Store
+
+# Teardown notes and raw reverse-engineering dumps stay local.
+docs/
