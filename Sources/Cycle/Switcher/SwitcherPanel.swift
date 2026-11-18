@@ -10,8 +10,10 @@ final class SwitcherPanel {
 	private unowned let controller: SwitcherController
 	private var panel: NSPanel?
 	private var host: NSHostingView<SwitcherView>?
-	/// The settings button's own little window, floating just left of the panel.
+	/// The settings button's own little window, in the screen's top-right corner.
 	private var gearPanel: NSPanel?
+	/// Dims the rest of the screen behind the switcher during a session.
+	private var dimPanel: NSPanel?
 
 	init(state: SwitcherState, controller: SwitcherController) {
 		self.state = state
@@ -21,6 +23,7 @@ final class SwitcherPanel {
 	func show() {
 		let panel = self.panel ?? makePanel()
 		self.panel = panel
+		showDim()
 		relayout()
 		panel.alphaValue = 1
 		panel.orderFrontRegardless()
@@ -39,6 +42,51 @@ final class SwitcherPanel {
 	func hide() {
 		panel?.orderOut(nil)
 		gearPanel?.orderOut(nil)
+		hideDim()
+	}
+
+	/// A subtle shade over the switcher's screen, fading in behind the panel. It ignores
+	/// the mouse, so a click anywhere still reaches the window under it (and ends the
+	/// session, as before).
+	private func showDim() {
+		let screen = Self.screenUnderPointer()
+		let dim = dimPanel ?? makeDimPanel()
+		dimPanel = dim
+		dim.setFrame(screen.frame, display: false)
+		dim.alphaValue = 0
+		dim.orderFrontRegardless()
+		NSAnimationContext.runAnimationGroup { context in
+			context.duration = 0.18
+			dim.animator().alphaValue = 1
+		}
+	}
+
+	private func hideDim() {
+		guard let dim = dimPanel, dim.isVisible else { return }
+		NSAnimationContext.runAnimationGroup({ context in
+			context.duration = 0.12
+			dim.animator().alphaValue = 0
+		}) {
+			MainActor.assumeIsolated {
+				// A new session may have started while this faded; leave it up then.
+				if dim.alphaValue == 0 { dim.orderOut(nil) }
+			}
+		}
+	}
+
+	private func makeDimPanel() -> NSPanel {
+		let dim = NSPanel(
+			contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
+			backing: .buffered, defer: false)
+		// Just under the switcher and its gear.
+		dim.level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue - 1)
+		dim.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+		dim.isOpaque = false
+		dim.hasShadow = false
+		dim.ignoresMouseEvents = true
+		dim.animationBehavior = .none
+		dim.backgroundColor = NSColor.black.withAlphaComponent(Theme.Panel.dimOpacity)
+		return dim
 	}
 
 	/// Re-measure for the current window list and recentre.
@@ -60,17 +108,19 @@ final class SwitcherPanel {
 			).integral,
 			display: true
 		)
-		placeGear(beside: panel.frame)
+		placeGear()
 	}
 
-	/// Puts the settings button just left of the panel, top edges aligned, creating its
-	/// window on first use.
-	private func placeGear(beside frame: CGRect) {
+	/// Puts the settings button in the top-right corner of the switcher's screen, creating
+	/// its window on first use.
+	private func placeGear() {
 		let gear = gearPanel ?? makeGearPanel()
 		gearPanel = gear
 		let size = Theme.Gear.diameter
+		let visible = Self.screenUnderPointer().visibleFrame
+		let margin = Theme.Gear.margin
 		gear.setFrame(
-			CGRect(x: frame.minX - Theme.Gear.gap - size, y: frame.maxY - size, width: size, height: size),
+			CGRect(x: visible.maxX - margin - size, y: visible.maxY - margin - size, width: size, height: size),
 			display: true)
 	}
 

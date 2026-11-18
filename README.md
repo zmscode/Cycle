@@ -18,7 +18,7 @@ other layouts. Each window's controls (close, minimize, full screen, then quit) 
 when it's highlighted or under the pointer. A quick ⌘Tab tap switches to the previous window
 without showing the panel, and pressing ⌘Tab rapidly never leaves the switcher stuck open.
 
-There's no menu-bar item. Settings are behind the round gear floating left of the switcher
+There's no menu-bar item. Settings are behind the round gear in the top-right corner of the screen while the switcher is open
 (it keeps the switcher open until Return, a click or Escape; Escape closes settings first), or
 open Cycle again from Finder or Spotlight.
 They cover the layout, the modifier (⌘, ⌥ or ⌃), whether the switcher stays open until

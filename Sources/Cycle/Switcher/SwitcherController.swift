@@ -411,15 +411,21 @@ final class SwitcherController {
 		settingsPanel.close()
 	}
 
-	/// Beside the switcher, never over its windows: left of the gear with the tops aligned,
-	/// else right of the panel, else just below it.
+	/// Just below the gear, right-aligned with it, unless that would cover the switcher:
+	/// then beside the panel (left, else right), else below it.
 	private func settingsAnchor(in frame: CGRect) -> CGPoint {
 		let size = settingsPanel.size
 		let gap: CGFloat = 12
 		let visible = SwitcherPanel.screenUnderPointer().visibleFrame
-		let leftEdge = panel.gearFrame?.minX ?? frame.minX
-		if leftEdge - gap - size.width >= visible.minX {
-			return CGPoint(x: leftEdge - gap - size.width, y: frame.maxY)
+		if let gear = panel.gearFrame {
+			let topLeft = CGPoint(x: gear.maxX - size.width, y: gear.minY - gap)
+			let rect = CGRect(x: topLeft.x, y: topLeft.y - size.height, width: size.width, height: size.height)
+			if !rect.intersects(frame.insetBy(dx: -gap, dy: -gap)), rect.minY >= visible.minY {
+				return topLeft
+			}
+		}
+		if frame.minX - gap - size.width >= visible.minX {
+			return CGPoint(x: frame.minX - gap - size.width, y: frame.maxY)
 		}
 		if frame.maxX + gap + size.width <= visible.maxX {
 			return CGPoint(x: frame.maxX + gap, y: frame.maxY)

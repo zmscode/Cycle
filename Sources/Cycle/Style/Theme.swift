@@ -11,6 +11,8 @@ enum Theme {
 		/// With the search bar off there's no top row at all.
 		static let compactHeaderHeight: CGFloat = 0
 		static let minWidth: CGFloat = 420
+		/// How much the rest of the screen darkens while the switcher is open.
+		static let dimOpacity: CGFloat = 0.18
 	}
 
 	enum Card {
@@ -49,10 +51,12 @@ enum Theme {
 		static let minWidth: CGFloat = 200
 	}
 
-	/// The floating settings button beside the switcher.
+	/// The floating settings button in the screen's top-right corner.
 	enum Gear {
 		static let diameter: CGFloat = 40
 		static let gap: CGFloat = 10
+		/// Inset from the screen's top-right corner.
+		static let margin: CGFloat = 16
 	}
 
 	enum Controls {
