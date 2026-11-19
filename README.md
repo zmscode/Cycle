@@ -27,8 +27,18 @@ silicon.
 | Esc                   | close settings, then clear the filter, then cancel            |
 | Return                | switch to the highlighted window                              |
 
-Windows are grouped by app by default; a grid and a list (with a large preview) are the
-other layouts. Each window's controls (close, minimize, full screen, then quit) appear on it
+Windows are grouped by app by default. The other layouts, picked in settings:
+
+- **Grid**: every window in rows. **List**: rows with large icons and a big preview.
+- **Stacked Deck**: one card per app with its windows stacked. ← → and Tab move between apps;
+  ↓ fans an app's stack out, ↑ closes it.
+- **App Strip and Shelf**: a row of app icons, the highlighted app's windows on a shelf
+  below. ← → and Tab change app; ↑ ↓ move along the shelf.
+- **Columns per App**: a column per app with its windows stacked. ↑ ↓ move within a
+  column, ← → between columns.
+
+Try any layout over made-up windows with `just demo 1` (deck), `2` (shelf), `3` (columns) or
+a name (`grouped`, `grid`, `list`); the keyboard and mouse work, and Esc closes it. Each window's controls (close, minimize, full screen, then quit) appear on it
 when it's highlighted or under the pointer. A quick ⌘Tab tap switches to the previous window
 without showing the panel, and pressing ⌘Tab rapidly never leaves the switcher stuck open.
 

@@ -8,6 +8,9 @@ struct AppGroupCard: View {
 	let metrics: SwitcherLayout
 	let selection: Namespace.ID
 	let controller: SwitcherController
+	/// Overrides the card's size (the deck draws a fanned stack at least a card wide and
+	/// as tall as its neighbours).
+	var size: CGSize?
 
 	private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: Theme.Group.radius) }
 
@@ -41,8 +44,8 @@ struct AppGroupCard: View {
 		}
 		.padding(Theme.Group.padding)
 		.frame(
-			width: metrics.groupWidth(group),
-			height: metrics.groupHeight(group),
+			width: size?.width ?? metrics.groupWidth(group),
+			height: size?.height ?? metrics.groupHeight(group),
 			alignment: .topLeading)
 		.insetSurface(cornerRadius: Theme.Group.radius, isHighlighted: containsSelection)
 		.overlay {

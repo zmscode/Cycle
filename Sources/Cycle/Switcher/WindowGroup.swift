@@ -1,6 +1,6 @@
 import Foundation
 
-/// One app's windows in the grouped layout, as indexes into the session's window list.
+/// One app's windows in the per-app layouts, as indexes into the session's window list.
 struct WindowGroup: Identifiable {
 	let id: String
 	let indices: [Int]
@@ -22,7 +22,7 @@ struct WindowGroup: Identifiable {
 		groups(for: windows).flatMap { group in group.indices.map { windows[$0] } }
 	}
 
-	private static func groupKey(_ window: SwitcherWindow) -> String {
+	static func groupKey(_ window: SwitcherWindow) -> String {
 		"\(window.pid)-\(window.appName)"
 	}
 }

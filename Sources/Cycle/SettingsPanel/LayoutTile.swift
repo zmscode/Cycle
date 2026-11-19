@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// The three layouts as round controls with captions; the current one is filled.
+/// The layouts as round controls with captions, three across; the current one is filled.
 struct LayoutTile: View {
 	@Binding var selection: SwitcherStyle
 
@@ -8,10 +8,10 @@ struct LayoutTile: View {
 		ControlTile {
 			VStack(alignment: .leading, spacing: 8) {
 				Text("Layout").font(.callout.bold())
-				HStack {
+				// Three across, so all six layouts fit in two rows.
+				LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
 					ForEach(SwitcherStyle.allCases, id: \.self) { style in
 						LayoutChoice(style: style, isSelected: selection == style, onSelect: select)
-							.frame(maxWidth: .infinity)
 					}
 				}
 			}

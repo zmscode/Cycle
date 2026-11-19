@@ -50,7 +50,7 @@ final class SwitcherPanel {
 		return SwitcherLayout.metrics(
 			for: state.windows, style: Settings.layout,
 			maxSize: CGSize(width: visible.width * 0.9, height: visible.height * 0.8),
-			showsSearchBar: !state.searchQuery.isEmpty)
+			showsSearchBar: !state.searchQuery.isEmpty, fannedAppID: state.fannedAppID)
 	}
 
 	/// The top row's height in the current layout.

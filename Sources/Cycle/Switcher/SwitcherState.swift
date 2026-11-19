@@ -7,7 +7,15 @@ final class SwitcherState {
 	/// The session's full list; `windows` is it filtered by the search query.
 	var allWindows: [SwitcherWindow] = []
 	var windows: [SwitcherWindow] = []
-	var selectedID: CGWindowID?
+	var selectedID: CGWindowID? {
+		didSet {
+			if let window = selected { lastInApp[WindowGroup.groupKey(window)] = window.id }
+		}
+	}
+	/// The window last selected in each app, so moving back to an app returns to it.
+	var lastInApp: [String: CGWindowID] = [:]
+	/// Deck layout: the app whose stack is fanned out into tiles.
+	var fannedAppID: String?
 	var images: [CGWindowID: NSImage] = [:]
 	/// Average colour of each thumbnail; the card is tinted with it.
 	var tints: [CGWindowID: NSColor] = [:]

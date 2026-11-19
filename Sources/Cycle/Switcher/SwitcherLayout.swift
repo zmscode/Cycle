@@ -22,6 +22,14 @@ struct SwitcherLayout {
 	/// row of small windows takes less room. Cards in one row share it, keeping labels
 	/// and controls aligned.
 	var slotHeights: [CGFloat] = []
+	/// Deck: a closed stack's card size, and the app currently fanned out.
+	var deckCard: CGSize = .zero
+	var fannedAppID: String?
+	/// Shelf: the width of each app's icon tile.
+	var iconTile: CGFloat = 0
+	/// Columns: each column's width, and each row of columns' height.
+	var columnWidth: CGFloat = 0
+	var rowHeights: [CGFloat] = []
 	/// List: the detail pane's preview box.
 	let previewBox: CGSize
 	/// The content area under the top row.
@@ -36,7 +44,8 @@ struct SwitcherLayout {
 		previewBox: .zero, bodySize: .zero, scrolls: false)
 
 	static func metrics(
-		for windows: [SwitcherWindow], style: SwitcherStyle, maxSize: CGSize, showsSearchBar: Bool
+		for windows: [SwitcherWindow], style: SwitcherStyle, maxSize: CGSize, showsSearchBar: Bool,
+		fannedAppID: String? = nil
 	) -> SwitcherLayout {
 		let header = showsSearchBar ? Theme.Panel.searchHeight : Theme.Panel.compactHeaderHeight
 		let maxBody = CGSize(width: maxSize.width, height: maxSize.height - header)
@@ -45,6 +54,9 @@ struct SwitcherLayout {
 		case .grid: layout = grid(windows, maxBody: maxBody)
 		case .list: layout = list(count: windows.count, maxBody: maxBody)
 		case .grouped: layout = grouped(windows, maxBody: maxBody)
+		case .deck: layout = deck(windows, maxBody: maxBody, fannedAppID: fannedAppID)
+		case .shelf: layout = shelf(windows, maxBody: maxBody)
+		case .columns: layout = columns(windows, maxBody: maxBody)
 		}
 		layout.headerHeight = header
 		return layout
@@ -81,7 +93,7 @@ struct SwitcherLayout {
 	}
 
 	/// The tallest preview among `indices`: the shared preview-area height for a row.
-	private static func rowBox(_ indices: [Int], thumbs: [CGSize]) -> CGFloat {
+	static func rowBox(_ indices: [Int], thumbs: [CGSize]) -> CGFloat {
 		indices.map { thumbs.indices.contains($0) ? thumbs[$0].height : 0 }.max() ?? 0
 	}
 
@@ -163,7 +175,7 @@ struct SwitcherLayout {
 	}
 
 	/// Breaks items of the given widths into rows that fit `available`.
-	private static func flow(_ widths: [CGFloat], spacing: CGFloat, available: CGFloat) -> [[Int]] {
+	static func flow(_ widths: [CGFloat], spacing: CGFloat, available: CGFloat) -> [[Int]] {
 		var rows: [[Int]] = []
 		var current: [Int] = []
 		var used: CGFloat = 0
@@ -182,7 +194,7 @@ struct SwitcherLayout {
 		return rows
 	}
 
-	private static func rowWidth(_ widths: [CGFloat], spacing: CGFloat) -> CGFloat {
+	static func rowWidth(_ widths: [CGFloat], spacing: CGFloat) -> CGFloat {
 		widths.reduce(0, +) + CGFloat(max(widths.count - 1, 0)) * spacing
 	}
 
@@ -233,7 +245,7 @@ struct SwitcherLayout {
 			+ Theme.Card.inset + Theme.Group.padding
 	}
 
-	private static func groupWidth(_ group: WindowGroup, slots: [CGFloat]) -> CGFloat {
+	static func groupWidth(_ group: WindowGroup, slots: [CGFloat]) -> CGFloat {
 		let tiles = group.indices.map { (slots.indices.contains($0) ? slots[$0] : 0) + Theme.Card.inset * 2 }
 		return max(rowWidth(tiles, spacing: Theme.Group.tileSpacing), Theme.Group.minWidth) + Theme.Group.padding * 2
 	}
@@ -277,6 +289,9 @@ struct SwitcherLayout {
 			}
 		case .list:
 			return (0..<windowCount).map { [NavigationStop(index: $0, x: 0)] }
+		case .deck, .shelf, .columns:
+			// The controller moves by app in these layouts.
+			return []
 		case .grouped:
 			return groupRows.map { row in
 				var stops: [NavigationStop] = []

@@ -73,6 +73,28 @@ enum Theme {
 		static let margin: CGFloat = 16
 	}
 
+	/// The stacked-deck layout.
+	enum Deck {
+		/// How many windows show in a closed stack, and how far each one behind peeks out.
+		static let layers = 3
+		static let peek: CGFloat = 11
+	}
+
+	/// The app-strip-and-shelf layout.
+	enum Shelf {
+		static let iconTile: CGFloat = 92
+		static let iconSize: CGFloat = 54
+		static let gap: CGFloat = 12
+	}
+
+	/// The columns-per-app layout.
+	enum Columns {
+		static let minWidth: CGFloat = 220
+		static let maxWidth: CGFloat = 290
+		static let maxPreviewHeight: CGFloat = 140
+		static let minPreviewHeight: CGFloat = 70
+	}
+
 	enum Controls {
 		static let diameter: CGFloat = 12
 		static let spacing: CGFloat = 4

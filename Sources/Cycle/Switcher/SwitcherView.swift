@@ -22,6 +22,12 @@ struct SwitcherView: View {
 				WindowList(state: state, controller: controller, metrics: metrics)
 			case .grouped:
 				WindowGroupsView(state: state, controller: controller, metrics: metrics)
+			case .deck:
+				DeckView(state: state, controller: controller, metrics: metrics)
+			case .shelf:
+				ShelfView(state: state, controller: controller, metrics: metrics)
+			case .columns:
+				ColumnsView(state: state, controller: controller, metrics: metrics)
 			}
 		}
 		.frame(width: metrics.fullSize.width, height: metrics.fullSize.height, alignment: .top)

@@ -61,6 +61,12 @@ enum Demo {
 			tints[id] = mock.accent.blended(withFraction: 0.35, of: .black)
 		}
 		controller.showDemo(windows, images: images, tints: tints)
+		// `--interactive`: drive it with the keyboard (arrows, Tab, typing, scroll) and
+		// mouse; Esc, Return or a click closes it.
+		if args.contains("--interactive") {
+			controller.onSessionEnd = { NSApp.terminate(nil) }
+			controller.startDemoKeyboard()
+		}
 		// `--with-settings`: open the settings panel under the gear too.
 		if args.contains("--with-settings") {
 			DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { controller.toggleSettings() }
