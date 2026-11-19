@@ -18,6 +18,10 @@ struct SwitcherLayout {
 	let slots: [CGFloat]
 	/// The preview area's height: the tallest a preview can be.
 	let boxHeight: CGFloat
+	/// Each window's preview-area height, by index: the tallest preview in its row, so a
+	/// row of small windows takes less room. Cards in one row share it, keeping labels
+	/// and controls aligned.
+	var slotHeights: [CGFloat] = []
 	/// List: the detail pane's preview box.
 	let previewBox: CGSize
 	/// The content area under the top row.
@@ -55,6 +59,10 @@ struct SwitcherLayout {
 		thumbs.indices.contains(index) ? thumbs[index] : CGSize(width: boxHeight * 1.3, height: boxHeight)
 	}
 
+	func slotHeight(at index: Int) -> CGFloat {
+		slotHeights.indices.contains(index) ? slotHeights[index] : boxHeight
+	}
+
 	func slotWidth(at index: Int) -> CGFloat {
 		slots.indices.contains(index) ? slots[index] : boxHeight * 1.3
 	}
@@ -64,8 +72,27 @@ struct SwitcherLayout {
 		slotWidth(at: index) + Theme.Card.inset * 2
 	}
 
-	var cardHeight: CGFloat {
-		Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Card.labelHeight + Theme.Card.inset
+	func cardHeight(at index: Int) -> CGFloat {
+		Self.cardHeight(box: slotHeight(at: index))
+	}
+
+	static func cardHeight(box: CGFloat) -> CGFloat {
+		Theme.Card.inset + box + Theme.Card.labelGap + Theme.Card.labelHeight + Theme.Card.inset
+	}
+
+	/// The tallest preview among `indices`: the shared preview-area height for a row.
+	private static func rowBox(_ indices: [Int], thumbs: [CGSize]) -> CGFloat {
+		indices.map { thumbs.indices.contains($0) ? thumbs[$0].height : 0 }.max() ?? 0
+	}
+
+	/// Each index's row box height.
+	private static func slotHeights(rows: [[Int]], thumbs: [CGSize]) -> [CGFloat] {
+		var heights = [CGFloat](repeating: 0, count: thumbs.count)
+		for row in rows {
+			let box = rowBox(row, thumbs: thumbs)
+			for index in row where heights.indices.contains(index) { heights[index] = box }
+		}
+		return heights
 	}
 
 	// MARK: Preview sizes
@@ -125,13 +152,14 @@ struct SwitcherLayout {
 		let rows = flow(cardWidths, spacing: spacing, available: maxBody.width - padding * 2)
 		let widest = rows.map { rowWidth($0.map { cardWidths[$0] }, spacing: spacing) }.max() ?? 0
 		let width = max(widest + padding * 2, Theme.Panel.minWidth)
-		let cardHeight = Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Card.labelHeight
-			+ Theme.Card.inset
-		var height = CGFloat(rows.count) * cardHeight + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
+		let rowHeights = rows.map { cardHeight(box: rowBox($0, thumbs: thumbs)) }
+		var height = rowHeights.reduce(0, +) + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
 		if scrolls { height = min(height, maxBody.height) }
-		return SwitcherLayout(
+		var layout = SwitcherLayout(
 			style: .grid, rows: rows, groupRows: [], thumbs: thumbs, slots: slots, boxHeight: boxHeight,
 			previewBox: .zero, bodySize: CGSize(width: width, height: height), scrolls: scrolls)
+		layout.slotHeights = slotHeights(rows: rows, thumbs: thumbs)
+		return layout
 	}
 
 	/// Breaks items of the given widths into rows that fit `available`.
@@ -194,9 +222,14 @@ struct SwitcherLayout {
 		Self.groupWidth(group, slots: slots)
 	}
 
-	var groupHeight: CGFloat {
+	/// A group's height, from its row's shared preview-area height.
+	func groupHeight(_ group: WindowGroup) -> CGFloat {
+		Self.groupHeight(box: group.indices.first.map { slotHeight(at: $0) } ?? boxHeight)
+	}
+
+	static func groupHeight(box: CGFloat) -> CGFloat {
 		Theme.Group.padding + Theme.Group.headerHeight + Theme.Group.headerGap
-			+ Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Group.labelHeight
+			+ Theme.Card.inset + box + Theme.Card.labelGap + Theme.Group.labelHeight
 			+ Theme.Card.inset + Theme.Group.padding
 	}
 
@@ -215,14 +248,16 @@ struct SwitcherLayout {
 		let rows = flow(widths, spacing: spacing, available: maxBody.width - padding * 2).map { $0.map { groups[$0] } }
 		let widest = rows.map { rowWidth($0.map { groupWidth($0, slots: slots) }, spacing: spacing) }.max() ?? 0
 		let width = max(widest + padding * 2, Theme.Panel.minWidth)
-		let groupHeight = Theme.Group.padding + Theme.Group.headerHeight + Theme.Group.headerGap
-			+ Theme.Card.inset + boxHeight + Theme.Card.labelGap + Theme.Group.labelHeight
-			+ Theme.Card.inset + Theme.Group.padding
-		var height = CGFloat(rows.count) * groupHeight + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
+		// Every window in a visual row of groups shares that row's preview height.
+		let indexRows = rows.map { $0.flatMap(\.indices) }
+		let rowHeights = indexRows.map { groupHeight(box: rowBox($0, thumbs: thumbs)) }
+		var height = rowHeights.reduce(0, +) + CGFloat(max(rows.count - 1, 0)) * spacing + padding * 2
 		if scrolls { height = min(height, maxBody.height) }
-		return SwitcherLayout(
+		var layout = SwitcherLayout(
 			style: .grouped, rows: [], groupRows: rows, thumbs: thumbs, slots: slots, boxHeight: boxHeight,
 			previewBox: .zero, bodySize: CGSize(width: width, height: height), scrolls: scrolls)
+		layout.slotHeights = slotHeights(rows: indexRows, thumbs: thumbs)
+		return layout
 	}
 
 	// MARK: Arrow-key movement

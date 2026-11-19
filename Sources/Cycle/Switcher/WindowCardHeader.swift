@@ -14,7 +14,7 @@ struct WindowCardHeader: View {
 	}
 
 	var body: some View {
-		HStack(spacing: 8) {
+		HStack(spacing: 6) {
 			if !window.isWindowless {
 				WindowControls(isActive: isActive, onAction: onAction)
 			}
@@ -36,7 +36,7 @@ struct WindowCardHeader: View {
 				}
 			}
 			.lineLimit(1)
-			.truncationMode(.middle)
+			.truncationMode(.tail)
 			Spacer(minLength: 0)
 		}
 	}

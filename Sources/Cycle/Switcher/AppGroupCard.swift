@@ -32,7 +32,7 @@ struct AppGroupCard: View {
 						image: state.images[window.id],
 						isSelected: window.id == state.selectedID,
 						thumb: metrics.thumb(at: index),
-						slot: CGSize(width: metrics.slotWidth(at: index), height: metrics.boxHeight),
+						slot: CGSize(width: metrics.slotWidth(at: index), height: metrics.slotHeight(at: index)),
 						selection: selection,
 						controller: controller)
 					.id(window.id)
@@ -42,7 +42,7 @@ struct AppGroupCard: View {
 		.padding(Theme.Group.padding)
 		.frame(
 			width: metrics.groupWidth(group),
-			height: metrics.groupHeight,
+			height: metrics.groupHeight(group),
 			alignment: .topLeading)
 		.insetSurface(cornerRadius: Theme.Group.radius, isHighlighted: containsSelection)
 		.overlay {

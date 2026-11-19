@@ -28,12 +28,12 @@ enum Theme {
 		static let minAspect: CGFloat = 0.45
 		static let maxAspect: CGFloat = 2.6
 		/// Size relative to the largest window: (area ratio) ^ scaleCurve, at least minScale.
-		static let scaleCurve: CGFloat = 0.35
-		static let minScale: CGFloat = 0.55
+		static let scaleCurve: CGFloat = 0.2
+		static let minScale: CGFloat = 0.75
 		static let windowlessScale: CGFloat = 0.7
 		/// A card is never narrower than this, so its label stays readable.
 		/// Wide enough for the header row: controls, icon and a readable name.
-		static let minSlotWidth: CGFloat = 236
+		static let minSlotWidth: CGFloat = 214
 		static let maxThumbHeight: CGFloat = 150
 		static let minThumbHeight: CGFloat = 96
 		static let iconSize: CGFloat = 18
@@ -75,7 +75,7 @@ enum Theme {
 
 	enum Controls {
 		static let diameter: CGFloat = 12
-		static let spacing: CGFloat = 6
+		static let spacing: CGFloat = 4
 	}
 
 	enum Colors {
