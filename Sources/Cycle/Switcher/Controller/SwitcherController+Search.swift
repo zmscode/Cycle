@@ -13,6 +13,8 @@ extension SwitcherController {
 			state.selectedID = state.windows.first?.id
 		}
 		panel.relayout()
+		// The switcher changed size: the board moves with it.
+		if state.board != nil { showBoard() }
 	}
 
 	/// Case-insensitive subsequence match, so "chfig" finds "Chrome — Fig & Fennel".

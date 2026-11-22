@@ -5,12 +5,14 @@ import SwiftUI
 /// lined up, the board shows the layout the drop would make: every window slides to its
 /// new place and the dragged ones are outlined where they'll land.
 struct TilingBoardCard: View {
-	let drag: WindowDrag
+	let board: TilingBoard
+	/// The window being dragged over it, if any (otherwise the board just shows the layout,
+	/// with grips on its dividers).
+	let drag: WindowDrag?
 	let state: SwitcherState
 
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-	private var board: TilingBoard { drag.board }
 	private var placement: BoardPlacement { board.placement }
 
 	var body: some View {
@@ -32,11 +34,12 @@ struct TilingBoardCard: View {
 				chipView(chip)
 			}
 		}
-		.animation(reduceMotion ? nil : Theme.Motion.fade, value: drag.target)
+		.animation(reduceMotion ? nil : Theme.Motion.fade, value: drag?.target)
 		.environment(\.colorScheme, .dark)
 	}
 
 	private var caption: String {
+		guard let drag else { return "Drag a divider to resize · hold a window to tile it" }
 		let count = drag.windowIDs.count
 		var text =
 			count > 1
@@ -50,7 +53,7 @@ struct TilingBoardCard: View {
 
 	/// Where the drop goes, in words.
 	private var action: String {
-		switch drag.target {
+		switch drag?.target {
 		case nil: "Drop on the screen or a preset"
 		case .fill?: "Fill the screen"
 		case .edge(.left)?: "Full height on the left"
@@ -59,7 +62,7 @@ struct TilingBoardCard: View {
 		case .edge(.bottom)?: "Full width along the bottom"
 		case .pane(let id, _)? where TilingSlot.isPlaceholder(id): "Fill this slot"
 		case .pane(let id, .center)?:
-			isTiled(drag.windowID) && drag.windowIDs.count == 1
+			drag.map { isTiled($0.windowID) && $0.windowIDs.count == 1 } ?? false
 				? "Swap with \(name(of: id))" : "Replace \(name(of: id))"
 		case .pane(let id, .left)?: "Left of \(name(of: id))"
 		case .pane(let id, .right)?: "Right of \(name(of: id))"
@@ -91,13 +94,13 @@ struct TilingBoardCard: View {
 				}
 			}
 			// Over the board: the dragged windows on top, where they'd land.
-			if !drag.showsWholePreview {
+			if !showsWholePreview {
 				ForEach(sorted(landingFrames), id: \.key) { id, frame in
 					tile(id, frame: frame, role: incomingRole(of: id))
 				}
 				.transition(.opacity)
 			}
-			if drag.preview == nil, let target = drag.target {
+			if let drag, drag.preview == nil, let target = drag.target {
 				let rect = local(board.indicator(for: target))
 				DropHighlight()
 					.frame(width: rect.width, height: rect.height)
@@ -109,14 +112,16 @@ struct TilingBoardCard: View {
 		.accessibilityLabel(caption)
 	}
 
+	private var showsWholePreview: Bool { drag?.showsWholePreview ?? false }
+
 	/// Over a preset chip, the layout the drop would make; otherwise the current one.
 	private var shownFrames: [CGWindowID: CGRect] {
-		drag.showsWholePreview ? board.frames(of: drag.preview) : board.allFrames
+		showsWholePreview ? board.frames(of: drag?.preview) : board.allFrames
 	}
 
 	/// Where each dragged window would land.
 	private var landingFrames: [CGWindowID: CGRect] {
-		guard drag.preview != nil else { return [:] }
+		guard let drag, drag.preview != nil else { return [:] }
 		let dragged = Set(drag.windowIDs)
 		return board.frames(of: drag.preview).filter { dragged.contains($0.key) }
 	}
@@ -124,7 +129,7 @@ struct TilingBoardCard: View {
 	/// Over the board, a dragged window's old place shows the window that moves into it
 	/// (dropping a tiled window on another's middle swaps them).
 	private func standIn(for id: CGWindowID) -> CGWindowID? {
-		guard !drag.showsWholePreview, drag.windowIDs.contains(id), drag.preview != nil,
+		guard let drag, !drag.showsWholePreview, drag.windowIDs.contains(id), drag.preview != nil,
 			let old = board.allFrames[id]
 		else { return nil }
 		let dragged = Set(drag.windowIDs)
@@ -136,13 +141,14 @@ struct TilingBoardCard: View {
 	}
 
 	private func role(of id: CGWindowID) -> BoardTileRole {
-		guard drag.windowIDs.contains(id) else { return .resting }
+		guard let drag, drag.windowIDs.contains(id) else { return .resting }
 		return drag.showsWholePreview ? incomingRole(of: id) : .lifted
 	}
 
 	private func incomingRole(of id: CGWindowID) -> BoardTileRole {
-		let index = drag.windowIDs.firstIndex(of: id) ?? 0
-		return .incoming(number: drag.windowIDs.count > 1 ? index + 1 : nil)
+		let ids = drag?.windowIDs ?? []
+		let index = ids.firstIndex(of: id) ?? 0
+		return .incoming(number: ids.count > 1 ? index + 1 : nil)
 	}
 
 	/// Frames in a stable order, so tiles keep their stacking from one move to the next.
@@ -166,12 +172,21 @@ struct TilingBoardCard: View {
 		.offset(x: rect.minX, y: rect.minY)
 	}
 
+	/// The slots a drop on `preset` fills: the hovered one for one window; for several, the
+	/// first ones left to right, since marked windows fill in that order.
+	private func litSlots(of preset: TilingPreset, hovered: Int?) -> Set<Int> {
+		guard let hovered, let drag else { return [] }
+		guard drag.windowIDs.count > 1 else { return [hovered] }
+		return Set(preset.readingOrder(mainShare: board.mainShare).prefix(drag.windowIDs.count))
+	}
+
 	private func chipView(_ chip: PresetChip) -> some View {
 		let slot: Int? =
-			if case .preset(chip.preset, let slot)? = drag.target { slot } else { nil }
+			if case .preset(chip.preset, let slot)? = drag?.target { slot } else { nil }
 		return VStack(spacing: 4) {
 			PresetThumbnail(
-				preset: chip.preset, mainShare: board.mainShare, highlightedSlot: slot
+				preset: chip.preset, mainShare: board.mainShare,
+				highlightedSlots: litSlots(of: chip.preset, hovered: slot)
 			)
 			.frame(width: chip.rect.width, height: chip.rect.height)
 			.overlay(alignment: .topLeading) {

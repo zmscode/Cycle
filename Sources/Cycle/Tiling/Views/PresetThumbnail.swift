@@ -1,11 +1,12 @@
 import SwiftUI
 
 /// A preset's slots as small rounded blocks, as on the tiling board's chips and the
-/// settings panel's preset toggles. One slot can be lit (the one under the pointer).
+/// settings panel's preset toggles. Slots can be lit: the one under the pointer, or the
+/// ones a group of marked windows will fill.
 struct PresetThumbnail: View {
 	let preset: TilingPreset
 	let mainShare: Double
-	var highlightedSlot: Int?
+	var highlightedSlots: Set<Int> = []
 	var isEnabled = true
 
 	var body: some View {
@@ -14,7 +15,7 @@ struct PresetThumbnail: View {
 				preset, in: CGRect(origin: .zero, size: size), mainShare: mainShare)
 			for (slot, frame) in frames {
 				let path = Path(roundedRect: frame, cornerRadius: 3)
-				let lit = slot == highlightedSlot
+				let lit = highlightedSlots.contains(slot)
 				context.fill(
 					path,
 					with: .color(

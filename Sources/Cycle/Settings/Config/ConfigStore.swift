@@ -74,8 +74,11 @@ final class ConfigStore: @unchecked Sendable {
 		let workspace = NSWorkspace.shared
 		if workspace.urlForApplication(toOpen: url) != nil {
 			workspace.open(url)
-		} else if let editor = workspace.urlForApplication(withBundleIdentifier: "com.apple.TextEdit") {
-			workspace.open([url], withApplicationAt: editor, configuration: NSWorkspace.OpenConfiguration())
+		} else if let editor = workspace.urlForApplication(
+			withBundleIdentifier: "dev.zed.Zed")
+		{
+			workspace.open(
+				[url], withApplicationAt: editor, configuration: NSWorkspace.OpenConfiguration())
 		}
 	}
 
@@ -95,10 +98,12 @@ final class ConfigStore: @unchecked Sendable {
 		guard let data = try? encoder.encode(config) else { return }
 		lock.withLock { lastData = data }
 		do {
-			try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+			try FileManager.default.createDirectory(
+				at: directory, withIntermediateDirectories: true)
 			try data.write(to: url, options: .atomic)
 		} catch {
-			FileHandle.standardError.write(Data("Cycle: couldn't save \(url.path): \(error)\n".utf8))
+			FileHandle.standardError.write(
+				Data("Cycle: couldn't save \(url.path): \(error)\n".utf8))
 		}
 		// An atomic write replaces the file, so the old one's watcher is stale.
 		watchFile()

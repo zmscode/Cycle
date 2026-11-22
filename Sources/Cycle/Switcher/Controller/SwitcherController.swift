@@ -18,6 +18,7 @@ final class SwitcherController {
 			self?.tapIsRunning ?? false
 		})
 		settings.settings.onChange = { [weak self] in self?.settingsChanged() }
+		settings.currentLayout = { [weak self] in self?.currentPresetLayout() }
 		return settings
 	}()
 
@@ -65,6 +66,8 @@ final class SwitcherController {
 	// Drag-to-tile (see SwitcherController+Tiling).
 	let dragTracker = DragTracker()
 	let tiling = TilingCoordinator()
+	/// Grips on the board's dividers during a session.
+	let boardDividers = DividerHandles(style: .board)
 	private(set) lazy var tilingOverlay = TilingOverlayPanel(state: state)
 	/// The click that ends a drag reaches the card too; it mustn't switch windows.
 	var ignoresNextClick = false
@@ -97,6 +100,7 @@ final class SwitcherController {
 		tiling.start()
 		mru.start()
 		setUpDragTracker()
+		setUpBoard()
 		tap.handler = { [weak self] type, event in
 			// The tap runs on the main run loop.
 			MainActor.assumeIsolated { self?.handle(type, event) ?? false }
@@ -195,10 +199,10 @@ final class SwitcherController {
 		trace("present")
 		panel.show()
 		dragTracker.start()
+		showBoard()
 		captureThumbnails()
-		outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [
-			.leftMouseDown, .rightMouseDown,
-		]) { [weak self] _ in
+		// A right-click outside undoes instead (the event tap sees it first).
+		outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown]) { [weak self] _ in
 			MainActor.assumeIsolated { self?.cancel() }
 		}
 	}
@@ -258,6 +262,7 @@ final class SwitcherController {
 		if state.isShowingSettings { closeSettings() }
 		dragTracker.stop()
 		cancelDrag()
+		hideBoard()
 		pointerWindowID = nil
 		state.markedIDs = []
 		state.tilingNotice = nil

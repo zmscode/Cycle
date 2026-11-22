@@ -56,6 +56,7 @@ extension SwitcherController {
 		setQuery(state.searchQuery)
 		state.selectedID = selected
 		panel.relayout()
+		if state.board != nil { showBoard() }
 		if state.isShowingSettings, let frame = panel.frame {
 			settingsPanel.show(topLeft: settingsAnchor(in: frame))
 		}

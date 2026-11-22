@@ -1,20 +1,51 @@
+import RiftCore
 import SwiftUI
 
-/// Drag-to-tile settings: which presets the board offers, the main window's share in the
-/// presets that have one, and the gaps between tiled windows and around the screen.
+/// Drag-to-tile settings: which presets the board offers (Cycle's own and ones made in the
+/// editor), the main window's share in the presets that have one, the gaps between tiled
+/// windows and around the screen, and how long windows take to glide into place.
 struct TilingTile: View {
 	@Bindable var settings: MenuSettings
+	/// The screen's tiled layout, for the editor to start from.
+	let currentLayout: () -> RiftLayout<Int>?
+	/// The tile changed height (the editor opened or closed): the panel fits itself to it.
+	let onResize: () -> Void
+
+	@State private var draft: PresetDraft?
+	@Environment(\.accessibilityReduceMotion) private var reduceMotion
 
 	var body: some View {
 		ControlTile {
+			Group {
+				if draft != nil {
+					PresetEditor(
+						draft: Binding { draft ?? PresetDraft(startingWith: .pane(0), name: "") } set: {
+							draft = $0
+						},
+						currentLayout: currentLayout(), onSave: save, onCancel: closeEditor,
+						onDelete: delete,
+						onEditingText: { settings.isEditingText = $0 })
+					.transition(.opacity.combined(with: .scale(scale: 0.97)))
+				} else {
+					options
+						.transition(.opacity)
+				}
+			}
+		}
+		.onChange(of: draft == nil) { DispatchQueue.main.async(execute: onResize) }
+	}
+
+	private var options: some View {
 			VStack(alignment: .leading, spacing: 10) {
 				Text("Tiling").font(.callout.bold())
 				LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 8) {
-					ForEach(TilingPreset.allCases) { preset in
+					ForEach(TilingPreset.all(customs: settings.tilingCustomPresets)) { preset in
 						PresetToggle(
 							preset: preset, mainShare: settings.tilingMainShare,
-							shortcut: shortcut(for: preset), onToggle: toggle)
+							shortcut: shortcut(for: preset), onToggle: toggle,
+							onEdit: preset.isCustom ? { edit(preset) } : nil)
 					}
+					NewPresetTile(action: newPreset)
 				}
 				TilingSlider(
 					title: "Gaps", value: $settings.tilingGap, range: 0...30,
@@ -25,8 +56,64 @@ struct TilingTile: View {
 				TilingSlider(
 					title: "Main Window", value: $settings.tilingMainShare, range: 0.5...0.75,
 					step: 0.05, format: percent)
+				TilingSlider(
+					title: "Animation", value: $settings.tilingAnimationDuration,
+					range: 0.05...0.5, step: 0.05, format: seconds
+				)
+				.disabled(!settings.tilingAnimates || reduceMotion)
+				.opacity(settings.tilingAnimates && !reduceMotion ? 1 : 0.45)
+				if reduceMotion {
+					Label("Windows jump into place while Reduce Motion is on", systemImage: "figure.walk.motion")
+						.font(.caption2)
+						.foregroundStyle(.secondary)
+				}
 			}
+	}
+
+	// MARK: Editing presets
+
+	private func newPreset() {
+		let number = settings.tilingCustomPresets.count + 1
+		openEditor(PresetDraft(startingWith: BuiltinPreset.halves.layout(mainShare: 0.5), name: "Custom \(number)"))
+	}
+
+	private func edit(_ preset: TilingPreset) {
+		guard let custom = settings.tilingCustomPresets.first(where: { $0.id == preset.id }) else {
+			return
 		}
+		openEditor(PresetDraft(editing: custom))
+	}
+
+	private func openEditor(_ new: PresetDraft) {
+		withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { draft = new }
+	}
+
+	private func closeEditor() {
+		withAnimation(reduceMotion ? nil : .smooth(duration: 0.25)) { draft = nil }
+	}
+
+	/// Saves the draft; a new preset goes straight onto the board.
+	private func save() {
+		guard let draft else { return }
+		let preset = draft.saved
+		var customs = settings.tilingCustomPresets
+		if let index = customs.firstIndex(where: { $0.id == preset.id }) {
+			customs[index] = preset
+		} else {
+			customs.append(preset)
+		}
+		settings.tilingCustomPresets = customs
+		var shown = settings.tilingPresets.map(\.id)
+		if draft.isNew { shown.append(preset.id) }
+		settings.tilingPresets = shown.compactMap { TilingPreset.named($0, customs: customs) }
+		closeEditor()
+	}
+
+	private func delete() {
+		guard let draft else { return }
+		settings.tilingCustomPresets.removeAll { $0.id == draft.id }
+		settings.tilingPresets.removeAll { $0.id == draft.id }
+		closeEditor()
 	}
 
 	private func toggle(_ preset: TilingPreset) {
@@ -38,10 +125,11 @@ struct TilingTile: View {
 		}
 		// The ⌘ numbers follow the grid's order, unless the order's been set by hand in
 		// cycle.config: then a newly shown preset just goes on the end.
-		let canonical = TilingPreset.allCases.filter(settings.tilingPresets.contains)
+		let all = TilingPreset.all(customs: settings.tilingCustomPresets)
+		let canonical = all.filter(settings.tilingPresets.contains)
 		if settings.tilingPresets == canonical {
 			let shown = Set(presets)
-			presets = TilingPreset.allCases.filter(shown.contains)
+			presets = all.filter(shown.contains)
 		}
 		settings.tilingPresets = presets
 	}
@@ -54,6 +142,10 @@ struct TilingTile: View {
 
 	private func points(_ value: Double) -> String {
 		value == 0 ? "None" : "\(Int(value)) pt"
+	}
+
+	private func seconds(_ value: Double) -> String {
+		value.formatted(.number.precision(.fractionLength(2))) + " s"
 	}
 
 	private func percent(_ value: Double) -> String {

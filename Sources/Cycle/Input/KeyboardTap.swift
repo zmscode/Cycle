@@ -23,6 +23,8 @@ final class KeyboardTap {
 			| (1 << CGEventType.flagsChanged.rawValue)
 			// Scrolling steps through windows while the switcher is open.
 			| (1 << CGEventType.scrollWheel.rawValue)
+			// A right-click outside the switcher undoes the last tiling change.
+			| (1 << CGEventType.rightMouseDown.rawValue)
 		let callback: CGEventTapCallBack = { _, type, event, refcon in
 			guard let refcon else { return Unmanaged.passUnretained(event) }
 			let me = Unmanaged<KeyboardTap>.fromOpaque(refcon).takeUnretainedValue()

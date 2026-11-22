@@ -46,6 +46,11 @@ struct TilingBoard {
 
 	private var scale: CGFloat { visible.width > 0 ? rect.width / visible.width : 1 }
 
+	/// The layout on screen: frames and dividers.
+	var geometry: RiftGeometry<CGWindowID>? {
+		layout?.geometry(in: tileArea, metrics: metrics)
+	}
+
 	/// Every slot's frame on screen, empty preset slots included.
 	var allFrames: [CGWindowID: CGRect] { frames(of: layout) }
 

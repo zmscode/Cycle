@@ -33,6 +33,20 @@ final class TilingOverlayPanel {
 		panel?.orderOut(nil)
 	}
 
+	/// A window-server point (top-left of the main screen, y down) in the overlay's
+	/// coordinates.
+	func local(windowServer point: CGPoint) -> CGPoint {
+		let height = NSScreen.screens.first?.frame.height ?? 0
+		return local(CGPoint(x: point.x, y: height - point.y))
+	}
+
+	/// A rectangle in the overlay's coordinates on the screen (AppKit coordinates).
+	func global(_ rect: CGRect) -> CGRect {
+		CGRect(
+			x: screenFrame.minX + rect.minX, y: screenFrame.maxY - rect.maxY, width: rect.width,
+			height: rect.height)
+	}
+
 	/// A screen point (AppKit, bottom-left origin) in the overlay's coordinates.
 	func local(_ point: CGPoint) -> CGPoint {
 		CGPoint(x: point.x - screenFrame.minX, y: screenFrame.maxY - point.y)

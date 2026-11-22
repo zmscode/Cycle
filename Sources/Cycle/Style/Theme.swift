@@ -96,6 +96,8 @@ enum Theme {
 		/// A tiled window moved or resized by more than this is no longer tiled.
 		static let movedTolerance: CGFloat = 24
 		static let ghostWidth: CGFloat = 150
+		/// How wide the board's divider grips are to grab.
+		static let boardGripThickness: CGFloat = 8
 		/// Over a drop target the ghost shrinks to this share of its size, its top-left
 		/// corner this far down and right of the pointer, clear of the slot being aimed at.
 		static let ghostAsideScale: CGFloat = 0.4

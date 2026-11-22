@@ -31,7 +31,7 @@
 			}
 			let halves: RiftLayout<CGWindowID> = .split(
 				RiftSplit(axis: .horizontal, position: 0.5, first: .pane(1), second: .pane(2)))
-			let presets = Settings.tilingPresets.isEmpty ? [.halves] : Settings.tilingPresets
+			let presets = Settings.tilingPresets.isEmpty ? [.builtin(.halves)] : Settings.tilingPresets
 			let placement = TilingOverlayPanel.placement(
 				frame: frame, visible: visible, switcher: switcher, presets: presets)
 			let board = TilingBoard(
@@ -88,13 +88,43 @@
 			render(
 				"d-group-center", dragging: [3, 4],
 				at: CGPoint(x: b.minX + b.width * 0.75, y: b.midY))
+			// Marked windows fill slots left to right by mark, whichever slot is hovered.
+			if let halves = placement.chips.first {
+				render(
+					"e-halves-right-slot", dragging: [3, 4],
+					at: CGPoint(x: halves.rect.maxX - 4, y: halves.rect.midY))
+			}
 			for chip in placement.chips {
 				render(
-					"e-chip-\(chip.preset.rawValue)", dragging: [3, 4],
+					"e-chip-\(chip.preset.id)", dragging: [3, 4],
 					at: CGPoint(x: chip.rect.minX + 4, y: chip.rect.minY + 4))
 			}
+			// The board on its own (a session on a tiled screen, nothing picked up).
+			state.drag = nil
+			state.board = board
+			do {
+				let crop = placement.card.insetBy(dx: -20, dy: -20)
+				let view = TilingOverlayView(state: state)
+					.frame(width: frame.width, height: frame.height)
+					.background(Color(white: 0.12))
+				write(view, crop: crop, to: folder.appending(path: "f-board-only.png"))
+			}
+			// The preset editor, part way through making a preset.
+			var draft = PresetDraft(
+				startingWith: BuiltinPreset.mainStack.layout(mainShare: 0.6), name: "Coding")
+			if let stack = draft.layout.paneIDs.last { draft.split(stack, along: .horizontal) }
+			let editor = PresetEditor(
+				draft: .constant(draft), currentLayout: halves.mapPanes { Int($0) }, onSave: {},
+				onCancel: {}, onDelete: {}, onEditingText: { _ in }
+			)
+			.padding(10)
+			.frame(width: 276)
+			.background(Color(white: 0.16))
+			.environment(\.colorScheme, .dark)
+			write(editor, crop: nil, to: folder.appending(path: "g-editor.png"))
+
 			// Rows close up in proportion.
-			let thirds = TilingPreset.thirds.layout(mainShare: 0.6).mapPanes { CGWindowID($0 + 1) }
+			let thirds = BuiltinPreset.thirds.layout(mainShare: 0.6).mapPanes { CGWindowID($0 + 1) }
 			let uneven: RiftLayout<CGWindowID> = .split(
 				RiftSplit(
 					axis: .horizontal, position: 0.6, first: .pane(1),
@@ -112,6 +142,22 @@
 			try? log.joined(separator: "\n").write(
 				to: folder.appending(path: "log.txt"), atomically: true, encoding: .utf8)
 			print("rendered \(log.count) frames to \(folder.path)")
+		}
+
+		private static func write<V: View>(_ view: V, crop: CGRect?, to url: URL) {
+			let renderer = ImageRenderer(content: view)
+			renderer.scale = 2
+			guard var cg = renderer.cgImage else { return }
+			if let crop,
+				let cropped = cg.cropping(
+					to: CGRect(
+						x: crop.minX * 2, y: crop.minY * 2, width: crop.width * 2,
+						height: crop.height * 2))
+			{
+				cg = cropped
+			}
+			try? NSBitmapImageRep(cgImage: cg).representation(using: .png, properties: [:])?.write(
+				to: url)
 		}
 
 		private static func window(_ id: CGWindowID, _ name: String, _ bounds: CGRect)

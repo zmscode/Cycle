@@ -36,6 +36,11 @@ extension SwitcherController {
 				return true
 			}
 			guard ownsKeyboard else { return false }
+			// Typing a preset's name in settings: keys go to the text field (Escape still
+			// closes settings).
+			if state.isShowingSettings, settingsPanel.settings.isEditingText, keyCode != Key.escape {
+				return false
+			}
 			// Until the list arrives only navigation and Escape mean anything.
 			if phase == .loading {
 				switch keyCode {
@@ -92,7 +97,10 @@ extension SwitcherController {
 			return true
 
 		case .keyUp:
-			return ownsKeyboard
+			return ownsKeyboard && !(state.isShowingSettings && settingsPanel.settings.isEditingText)
+
+		case .rightMouseDown:
+			return phase == .active && rightClicked(at: event.location)
 
 		case .scrollWheel:
 			guard ownsKeyboard else { return false }

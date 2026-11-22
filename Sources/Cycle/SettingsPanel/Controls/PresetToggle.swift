@@ -8,6 +8,10 @@ struct PresetToggle: View {
 	/// "⌘1"… while it's shown (empty past the ninth), nil while hidden.
 	let shortcut: String?
 	let onToggle: (TilingPreset) -> Void
+	/// Custom presets can be edited (a pencil on hover).
+	var onEdit: (() -> Void)?
+
+	@State private var isHovered = false
 
 	private var isOn: Bool { shortcut != nil }
 	private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 8) }
@@ -43,6 +47,23 @@ struct PresetToggle: View {
 			}
 		}
 		.buttonStyle(.plain)
+		.overlay(alignment: .topLeading) {
+			if let onEdit, isHovered {
+				Button(action: onEdit) {
+					Image(systemName: "pencil")
+						.font(.system(size: 8, weight: .bold))
+						.foregroundStyle(.white)
+						.frame(width: 16, height: 16)
+						.background(Theme.Colors.mark, in: Circle())
+				}
+				.buttonStyle(.plain)
+				.offset(x: -2, y: -2)
+				.help("Edit \(preset.title)")
+				.accessibilityLabel("Edit \(preset.title)")
+				.transition(.scale.combined(with: .opacity))
+			}
+		}
+		.onHover { hovering in withAnimation(.snappy(duration: 0.15)) { isHovered = hovering } }
 		.sensoryFeedback(.selection, trigger: isOn)
 		.accessibilityLabel(preset.title)
 		.accessibilityValue(isOn ? "Shown" + (shortcut.map { $0.isEmpty ? "" : ", \($0)" } ?? "") : "Hidden")

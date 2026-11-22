@@ -1,4 +1,5 @@
 import AppKit
+import RiftCore
 import SwiftUI
 
 /// Cycle's settings, as a floating sheet of glass tiles. During a switcher session it
@@ -16,6 +17,11 @@ final class SettingsPanelController {
 	private var keyMonitor: Any?
 
 	var isVisible: Bool { panel?.isVisible == true }
+	/// The screen's tiled layout as preset slots, for the editor's "This Screen".
+	var currentLayout: () -> RiftLayout<Int>? = { nil }
+
+	/// The panel's frame on screen while it's open.
+	var frame: CGRect? { isVisible ? panel?.frame : nil }
 
 	/// The panel's size at its content's natural height.
 	var size: CGSize { preparedPanel().frame.size }
@@ -77,6 +83,16 @@ final class SettingsPanelController {
 		return panel
 	}
 
+	/// Fits the panel to its content, keeping its top edge where it is.
+	private func fitToContent() {
+		guard let panel, let host = panel.contentView else { return }
+		let top = panel.frame.maxY
+		let size = host.fittingSize
+		panel.setFrame(
+			CGRect(x: panel.frame.minX, y: top - size.height, width: size.width, height: size.height),
+			display: true, animate: false)
+	}
+
 	private func fadeIn(_ panel: NSPanel) {
 		panel.alphaValue = 0
 		panel.orderFrontRegardless()
@@ -103,6 +119,8 @@ final class SettingsPanelController {
 			tapIsRunning: tapIsRunning,
 			onSetup: { [weak self] in self?.showSetup() },
 			onOpenConfig: { ConfigStore.shared.openInEditor() },
+			currentLayout: { [weak self] in self?.currentLayout() },
+			onResize: { [weak self] in self?.fitToContent() },
 			onQuit: { NSApp.terminate(nil) })
 		let host = NSHostingView(rootView: view)
 		host.sizingOptions = [.intrinsicContentSize]

@@ -66,12 +66,19 @@ enum Settings {
 	/// names are skipped.
 	static var tilingPresets: [TilingPreset] {
 		get {
-			var seen = Set<TilingPreset>()
-			return tiling.presets.compactMap(TilingPreset.init(rawValue:)).filter {
-				seen.insert($0).inserted
+			var seen = Set<String>()
+			let customs = tiling.customPresets
+			return tiling.presets.compactMap { TilingPreset.named($0, customs: customs) }.filter {
+				seen.insert($0.id).inserted
 			}
 		}
-		set { store.update { $0.tiling.presets = newValue.map(\.rawValue) } }
+		set { store.update { $0.tiling.presets = newValue.map(\.id) } }
+	}
+
+	/// Presets made in the editor (shown on the board only once turned on in `tilingPresets`).
+	static var tilingCustomPresets: [CustomPreset] {
+		get { tiling.customPresets }
+		set { store.update { $0.tiling.customPresets = newValue } }
 	}
 
 	/// Close gaps when a tiled window closes or its app quits.
@@ -84,5 +91,23 @@ enum Settings {
 	static var tilingRestoresLayouts: Bool {
 		get { tiling.restoreLayouts }
 		set { store.update { $0.tiling.restoreLayouts = newValue } }
+	}
+
+	/// Grips in the gaps between tiled windows, for resizing them.
+	static var tilingShowsDividers: Bool {
+		get { tiling.showDividers }
+		set { store.update { $0.tiling.showDividers = newValue } }
+	}
+
+	/// Windows glide into place rather than jumping.
+	static var tilingAnimates: Bool {
+		get { tiling.animate }
+		set { store.update { $0.tiling.animate = newValue } }
+	}
+
+	/// How long windows take to glide into place, in seconds (0.05–0.5).
+	static var tilingAnimationDuration: Double {
+		get { min(max(tiling.animationDuration, 0.05), 0.5) }
+		set { store.update { $0.tiling.animationDuration = newValue } }
 	}
 }

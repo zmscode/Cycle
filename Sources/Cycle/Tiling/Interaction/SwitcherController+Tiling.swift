@@ -31,14 +31,17 @@ extension SwitcherController {
 	private func beginDrag(_ id: CGWindowID) {
 		guard isActive, let frame = panelFrame, let screen = panelScreen else { return }
 		let layout = tiling.layout(for: screen, windows: state.recentOrder)
-		let placement = tilingOverlay.show(
-			on: screen, below: frame, presets: Settings.tilingPresets)
+		// The board may be showing already; the drag takes it over.
+		let placement =
+			state.board?.placement
+			?? tilingOverlay.show(on: screen, below: frame, presets: Settings.tilingPresets)
+		boardDividers.hideAll()
 		let board = TilingBoard(
 			layout: layout, visible: screen.visibleFrameTopLeft, placement: placement,
 			displayScale: screen.backingScaleFactor)
 		state.selectedID = id
 		// A marked window brings the other marked windows with it.
-		let ids = state.markedIDs.contains(id) ? draggableMarks(startingWith: id) : [id]
+		let ids = state.markedIDs.contains(id) ? draggableMarks() : [id]
 		state.drag = WindowDrag(
 			windowID: id, windowIDs: ids, screen: screen, board: board,
 			pointer: tilingOverlay.local(NSEvent.mouseLocation), target: nil)
@@ -60,7 +63,8 @@ extension SwitcherController {
 			let layout = drag.board.dropping(drag.windowIDs, on: target)
 		else { return releaseIfModifierUp() }
 		if drag.windowIDs.count > 1 { state.markedIDs = [] }
-		tile(layout, on: drag.board, screen: drag.screen, focusing: drag.windowID)
+		let label: String = if case .preset(let preset, _) = target { preset.title } else { "Move" }
+		tile(layout, on: drag.board, screen: drag.screen, focusing: drag.windowID, label: label)
 	}
 
 	/// Right-click or Space: marks a window for tiling together, or unmarks it.
@@ -88,8 +92,8 @@ extension SwitcherController {
 			ids = drag.windowIDs
 			dragTracker.reset()
 			cancelDrag()
-		} else if let first = state.markedIDs.first(where: canTile) {
-			ids = draggableMarks(startingWith: first).filter(canTile)
+		} else if state.markedIDs.contains(where: canTile) {
+			ids = draggableMarks().filter(canTile)
 		} else if let id = state.selectedID, canTile(id) {
 			ids = [id]
 		} else {
@@ -103,7 +107,7 @@ extension SwitcherController {
 		else { return }
 		state.markedIDs = []
 		showNotice(preset.title + leftOutNote(before: board.layout, after: layout))
-		tile(layout, on: board, screen: screen, focusing: ids[0])
+		tile(layout, on: board, screen: screen, focusing: ids[0], label: preset.title)
 	}
 
 	/// " · Helium left untiled" for tiled windows `after` doesn't keep, else nothing.
@@ -122,7 +126,7 @@ extension SwitcherController {
 	}
 
 	/// Shows `text` at the foot of the switcher for a moment.
-	private func showNotice(_ text: String) {
+	func showNotice(_ text: String) {
 		trace("notice \(text)")
 		state.tilingNotice = text
 		let shown = text
@@ -136,26 +140,32 @@ extension SwitcherController {
 		state.windows.first { $0.id == id }.map(WindowTiler.canTile) ?? false
 	}
 
-	/// The marked windows still in the session: `id` first, then the rest in marking order.
-	private func draggableMarks(startingWith id: CGWindowID) -> [CGWindowID] {
+	/// The marked windows still in the session, in the order they were marked: the order
+	/// they fill a preset's slots (left to right) or sit side by side.
+	private func draggableMarks() -> [CGWindowID] {
 		let present = Set(state.windows.map(\.id))
-		return [id] + state.markedIDs.filter { $0 != id && present.contains($0) }
+		return state.markedIDs.filter(present.contains)
 	}
 
-	/// Hides the board without tiling anything.
+	/// Puts the dragged window down without tiling anything. The board stays if the
+	/// screen is tiled (it was showing before the drag).
 	func cancelDrag() {
 		guard state.drag != nil else { return }
 		state.drag = nil
-		tilingOverlay.hide()
+		if state.board == nil {
+			tilingOverlay.hide()
+		} else {
+			showBoardDividers()
+		}
 	}
 
 	/// Saves and applies `layout`, moving every window in it to its frame.
 	private func tile(
 		_ layout: RiftLayout<CGWindowID>, on board: TilingBoard, screen: NSScreen,
-		focusing id: CGWindowID
+		focusing id: CGWindowID, label: String
 	) {
 		state.selectedID = id
-		tiling.apply(layout, on: board, screen: screen, windows: state.recentOrder)
+		tiling.apply(layout, on: board, screen: screen, windows: state.recentOrder, label: label)
 		releaseIfModifierUp()
 	}
 

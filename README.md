@@ -39,8 +39,9 @@ without showing the panel, and pressing ⌘Tab rapidly never leaves the switcher
 
 ### Tiling
 
-Hold a window's card for a moment (or press and drag it) and a small copy of the screen
-appears under the switcher, showing the windows already tiled there. Drag onto it to tile:
+While the switcher's screen has tiled windows, a small copy of the screen (the board)
+shows under the switcher. Hold a window's card for a moment (or press and drag it) and the
+board appears if it isn't already. Drag onto it to tile:
 
 - onto an empty screen: the window fills it;
 - onto an edge of a tiled window: that window splits and the new one takes that half;
@@ -61,14 +62,14 @@ window shrinks and moves to the lower right of the pointer so the spot stays in 
 
 To tile several windows at once, mark each one first by right-clicking it or pressing Space.
 It gets a numbered badge. Right-click or press Space again to unmark it, or press Esc to
-clear them all. Dragging any marked window brings the others along. Dropped on a preset slot,
-the window you dragged takes that slot and the others fill the next slots in the order you
-marked them. Dropped on the screen or beside a tiled window, they go side by side (stacked
+clear them all. Dragging any marked window brings the others along. Dropped on a preset, they fill its slots in the order you
+marked them, left to right and then top to bottom (window 1 on the left in Halves, window 2
+on the right), whichever window you grabbed; the chip lights the slots they'll take. Dropped on the screen or beside a tiled window, they go side by side (stacked
 along a side edge), sharing the space evenly.
 
 From the keyboard, ⌘1 to ⌘9 apply the presets in the order the board shows them (the number
-is on each chip). The marked windows fill the slots in order, starting with the main slot,
-or the highlighted window does if nothing's marked. Mid-drag, the dragged windows are used.
+is on each chip). The marked windows fill the slots in the order you marked them, left to
+right, or the highlighted window takes the main slot if nothing's marked. Mid-drag, the dragged windows are used.
 If the screen is already laid out with that preset and has empty slots, the windows go into
 those instead. A note at the foot of the switcher confirms the preset, and names any tiled
 window that was left out.
@@ -92,6 +93,29 @@ launch panel isn't mistaken for a document. It then puts them back in place. A r
 window that closes within 10 seconds leaves its slot waiting for the real one. Minimized and
 hidden windows wait until they're shown.
 **Restore Layouts** turns this off.
+
+**Dividers.** Slim grips sit in the gaps between tiled windows on the screen. Drag one to
+resize the windows on either side live (it snaps to the middle with a tick), and
+double-click one to even them up. They sit just above the tiled windows, so a window in
+front covers them, and they hide while the tiled windows aren't on screen. The board has the
+same grips during a session. **Dividers** in settings turns the screen grips off.
+
+**Undo.** Right-click anywhere outside the switcher (on the desktop or another app's window)
+to undo the last tiling change: a drop, a preset, a divider drag. Each right-click undoes
+one more, up to 20. The click is caught, so the app underneath doesn't open a menu.
+
+**Custom presets.** The New tile at the end of the presets grid opens the preset editor. It
+has a little screen you split and resize: hover a slot to split it side by side, split it
+top to bottom, or remove it. Drag a divider to move it, or double-click it to even it. Start
+from any built-in preset, or from the screen's current layout. Slots are numbered as they'll
+be filled, and the largest is the main slot. A new preset goes on the board straight away;
+hover it in the grid and click the pencil to edit or delete it. Presets can have up to
+8 slots.
+
+**Animation.** Windows glide into place when tiled, restored or re-tiled (divider drags
+follow the pointer directly). **Animate** in settings turns it off, and the Animation slider
+sets how long it takes (0.05–0.5 s). It's off while macOS's Reduce Motion is on. An app that
+answers too slowly to animate smoothly snaps into place instead.
 
 The Tiling tile in settings picks which presets the board shows, the main window's share
 in Main + Stack and Centre, and the gaps between windows and around the screen's edges
@@ -124,14 +148,20 @@ UserDefaults.
     "mainShare": 0.6,
     "margin": 10,
     "presets": ["halves", "thirds", "quarters", "mainStack", "full"],
-    "restoreLayouts": true
+    "restoreLayouts": true,
+    "showDividers": true,
+    "animate": true,
+    "animationDuration": 0.2,
+    "customPresets": []
   }
 }
 ```
 
 `modifier` is `command`, `option` or `control`. `activationMode` is `onKeyRelease` or
 `onConfirmation`, and `layout` is `grouped`, `grid` or `list`. Preset names are `halves`,
-`thirds`, `quarters`, `mainStack`, `centre`, `rows` and `full`, in ⌘1… order.
+`thirds`, `quarters`, `mainStack`, `centre`, `rows` and `full`, in ⌘1… order, plus the `id`
+of any custom preset. A custom preset is `{ "id": "custom-…", "name": "…", "layout": <Rift
+tree> }`, where the tree's panes are slot numbers from 0.
 
 There's no menu-bar item. Settings are behind the round gear in the top-right corner of the
 screen while the switcher is open (it keeps the switcher open until Return, a click or Escape; Escape closes settings first), or
@@ -174,10 +204,12 @@ Everything is in `Sources/Cycle`, one type per file:
 | `Switcher/Controller`                       | The session controller, split by concern (keyboard, navigation, search, mouse, actions, settings) |
 | `Switcher/Model`, `Panel`, `Views`, `Cards` | Session state, the panel and its layout, and the SwiftUI views                                    |
 | `Tiling/Model`                              | Presets, the board (targets and drops) and drag state, built on RiftCore                          |
-| `Tiling/Engine` | The layout store, remembered layouts, close watching, the window mover and the coordinator that runs tiling between sessions |
-| `Tiling/Interaction`                        | Mouse tracking, the controller's tiling extension and the overlay panel                           |
+| `Tiling/Engine` | The layout store, remembered layouts, window watching, the animated window mover, and the coordinator (with undo, divider drags and screen grips) |
+| `Tiling/Dividers` | The divider grip windows, shared by the screen and the board |
+| `Tiling/Debug` | `--render-board` (debug builds): renders the board and editor offscreen |
+| `Tiling/Interaction` | Mouse tracking, the controller's tiling and board extensions, divider resizing and the overlay panel |
 | `Tiling/Views`                              | The board, presets, ghosts and mark badges                                                        |
-| `SettingsPanel`                             | The settings panel, its tiles and controls                                                        |
+| `SettingsPanel` | The settings panel, its tiles and controls, and the preset editor |
 | `Setup`                                     | First-run permissions window and drag-to-grant                                                    |
 | `Style`                                     | Theme constants and shared view styles                                                            |
 

@@ -78,6 +78,16 @@ final class MenuSettings {
 		}
 	}
 
+	var tilingCustomPresets = Settings.tilingCustomPresets {
+		didSet {
+			Settings.tilingCustomPresets = tilingCustomPresets
+			onChange?()
+		}
+	}
+
+	/// The preset editor's name field has the keyboard: the switcher lets keys through.
+	@ObservationIgnored var isEditingText = false
+
 	var tilingFillsGaps = Settings.tilingFillsGaps {
 		didSet {
 			Settings.tilingFillsGaps = tilingFillsGaps
@@ -88,6 +98,27 @@ final class MenuSettings {
 	var tilingRestoresLayouts = Settings.tilingRestoresLayouts {
 		didSet {
 			Settings.tilingRestoresLayouts = tilingRestoresLayouts
+			onChange?()
+		}
+	}
+
+	var tilingShowsDividers = Settings.tilingShowsDividers {
+		didSet {
+			Settings.tilingShowsDividers = tilingShowsDividers
+			onChange?()
+		}
+	}
+
+	var tilingAnimates = Settings.tilingAnimates {
+		didSet {
+			Settings.tilingAnimates = tilingAnimates
+			onChange?()
+		}
+	}
+
+	var tilingAnimationDuration = Settings.tilingAnimationDuration {
+		didSet {
+			Settings.tilingAnimationDuration = tilingAnimationDuration
 			onChange?()
 		}
 	}
@@ -106,8 +137,12 @@ final class MenuSettings {
 		sync(\.tilingGap, Settings.tilingGap)
 		sync(\.tilingMargin, Settings.tilingMargin)
 		sync(\.tilingMainShare, Settings.tilingMainShare)
+		sync(\.tilingCustomPresets, Settings.tilingCustomPresets)
 		sync(\.tilingPresets, Settings.tilingPresets)
 		sync(\.tilingFillsGaps, Settings.tilingFillsGaps)
 		sync(\.tilingRestoresLayouts, Settings.tilingRestoresLayouts)
+		sync(\.tilingShowsDividers, Settings.tilingShowsDividers)
+		sync(\.tilingAnimates, Settings.tilingAnimates)
+		sync(\.tilingAnimationDuration, Settings.tilingAnimationDuration)
 	}
 }

@@ -5,8 +5,8 @@ import RiftCore
 struct WindowDrag {
 	/// The window picked up.
 	let windowID: CGWindowID
-	/// Every window being dragged: the one picked up, plus the other marked windows, in
-	/// the order they fill a preset.
+	/// Every window being dragged: the one picked up, or all the marked windows in the
+	/// order they were marked (the order they fill a preset, left to right).
 	let windowIDs: [CGWindowID]
 	/// The screen being tiled: the one the switcher is on.
 	let screen: NSScreen

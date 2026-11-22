@@ -130,6 +130,38 @@ final class TilingStore {
 		placed[id] = frame
 	}
 
+	/// Whether a tiled window's `frame` is still where Cycle put it.
+	func isWherePlaced(_ id: CGWindowID, _ frame: CGRect) -> Bool {
+		guard let then = placed[id] else { return true }
+		return Self.matches(frame, then)
+	}
+
+	/// Takes a window out of the layout (the user moved it away). Returns its display.
+	func forget(_ id: CGWindowID) -> String? {
+		guard let identity = identities[id] else { return nil }
+		unbind(id)
+		for (display, tree) in remembered where tree.contains(.window(identity)) {
+			remembered[display] = tree.removingProportionally(.window(identity))
+			onChange?()
+			return display
+		}
+		return nil
+	}
+
+	/// `display`'s remembered tree, for undo.
+	func tree(for display: String) -> RiftLayout<RememberedSlot>? {
+		remembered[display]
+	}
+
+	/// Puts back a remembered tree (undo), binding its windows that are still open.
+	func restore(
+		_ tree: RiftLayout<RememberedSlot>?, for display: String, windows: [SwitcherWindow]
+	) {
+		remembered[display] = tree
+		_ = bind(windows)
+		onChange?()
+	}
+
 	/// A tiled window closed. Returns its display, whose layout changed.
 	func windowClosed(_ id: CGWindowID) -> String? {
 		guard let identity = identities[id] else { return nil }

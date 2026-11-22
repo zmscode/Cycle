@@ -57,9 +57,11 @@ extension TilingBoard {
 		}
 	}
 
-	/// `preset` with the first of `ids` in `slot` and the rest of them in the following
-	/// slots (main slot first), then the windows already tiled, then placeholders in any
-	/// left over. Windows that don't fit stay where they are, untiled.
+	/// `preset` with `ids` in it, then the windows already tiled (main slot first), then
+	/// placeholders in any slots left over. One window goes in `slot`, the one under the
+	/// pointer. Several (marked) windows go in reading order, left to right and top to
+	/// bottom, so window 1 takes the first slot, window 2 the next, and so on. Windows that
+	/// don't fit stay where they are, untiled.
 	private func applying(_ preset: TilingPreset, putting ids: [CGWindowID], from slot: Int)
 		-> RiftLayout<CGWindowID>
 	{
@@ -67,10 +69,16 @@ extension TilingBoard {
 		let tiled = (layout?.paneIDs ?? []).filter {
 			!dragged.contains($0) && !TilingSlot.isPlaceholder($0)
 		}
-		var waiting = Array(ids.dropFirst()) + tiled
 		var assigned: [Int: CGWindowID] = [:]
-		if let first = ids.first { assigned[slot] = first }
-		for other in preset.slotOrder(mainShare: mainShare) where other != slot {
+		if ids.count > 1 {
+			for (slot, id) in zip(preset.readingOrder(mainShare: mainShare), ids) {
+				assigned[slot] = id
+			}
+		} else if let first = ids.first {
+			assigned[slot] = first
+		}
+		var waiting = tiled
+		for other in preset.slotOrder(mainShare: mainShare) where assigned[other] == nil {
 			guard !waiting.isEmpty else { break }
 			assigned[other] = waiting.removeFirst()
 		}
@@ -98,9 +106,10 @@ extension TilingBoard {
 			return nil
 		}
 		let incoming = ids.filter { !layout.contains($0) }
-		let empty = preset.slotOrder(mainShare: mainShare).filter {
-			layout.contains(TilingSlot.placeholder($0))
-		}
+		let order =
+			incomingCount(ids, in: layout) > 1
+			? preset.readingOrder(mainShare: mainShare) : preset.slotOrder(mainShare: mainShare)
+		let empty = order.filter { layout.contains(TilingSlot.placeholder($0)) }
 		guard !incoming.isEmpty, empty.count >= incoming.count else { return nil }
 		var result = layout
 		for (slot, id) in zip(empty, incoming) {
@@ -108,6 +117,10 @@ extension TilingBoard {
 				result.replacing(.pane(TilingSlot.placeholder(slot))) { _ in .pane(id) } ?? result
 		}
 		return result
+	}
+
+	private func incomingCount(_ ids: [CGWindowID], in layout: RiftLayout<CGWindowID>) -> Int {
+		ids.filter { !layout.contains($0) }.count
 	}
 
 	/// Whether two layouts split the same way, whatever their panes.
