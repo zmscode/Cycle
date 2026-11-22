@@ -17,6 +17,15 @@ final class SwitcherState {
 	/// change mid-session.
 	var recentOrder: [SwitcherWindow] = []
 	var searchQuery = ""
+	/// A window being dragged onto the tiling board.
+	var drag: WindowDrag?
+	/// Windows right-clicked for tiling together, in the order they were marked.
+	var markedIDs: [CGWindowID] = []
+
+	/// A marked window's place in the order (from 1), or nil.
+	func markNumber(_ id: CGWindowID) -> Int? {
+		markedIDs.firstIndex(of: id).map { $0 + 1 }
+	}
 
 	var selected: SwitcherWindow? { windows.first { $0.id == selectedID } }
 }

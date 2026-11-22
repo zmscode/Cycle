@@ -17,6 +17,7 @@ struct WindowListRow: View {
 					.resizable()
 					.frame(width: Theme.List.iconSize, height: Theme.List.iconSize)
 					.accessibilityHidden(true)
+					.markBadge(controller.state.markNumber(window.id))
 			}
 			VStack(alignment: .leading, spacing: 1) {
 				Text(window.displayTitle)
@@ -50,7 +51,7 @@ struct WindowListRow: View {
 	}
 
 	private func hoverChanged(_ inside: Bool) {
-		if inside { controller.hover(window.id) }
+		if inside { controller.hover(window.id) } else { controller.hoverEnded(window.id) }
 	}
 
 	private func select() {

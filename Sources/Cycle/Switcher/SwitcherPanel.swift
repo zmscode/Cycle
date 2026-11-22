@@ -33,6 +33,15 @@ final class SwitcherPanel {
 	/// The panel's frame on screen.
 	var frame: CGRect? { panel?.isVisible == true ? panel?.frame : nil }
 
+	/// The screen the switcher is on.
+	private(set) var screen: NSScreen?
+
+	/// Whether `window` is the switcher panel itself.
+	func owns(_ window: NSWindow?) -> Bool {
+		guard let window, let panel else { return false }
+		return window === panel
+	}
+
 	/// The settings button's frame on screen; settings open beside it.
 	var gearFrame: CGRect? { gearPanel?.isVisible == true ? gearPanel?.frame : nil }
 
@@ -111,7 +120,9 @@ final class SwitcherPanel {
 	/// Re-measure for the current window list and recentre.
 	func relayout() {
 		guard let panel, let host else { return }
-		let visible = Self.screenUnderPointer().visibleFrame
+		let screen = Self.screenUnderPointer()
+		self.screen = screen
+		let visible = screen.visibleFrame
 		let metrics = measure()
 		self.metrics = metrics
 		host.rootView = SwitcherView(state: state, controller: controller, metrics: metrics)

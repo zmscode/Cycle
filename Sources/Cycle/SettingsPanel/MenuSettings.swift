@@ -49,4 +49,32 @@ final class MenuSettings {
 			onChange?()
 		}
 	}
+
+	var tilingGap = Settings.tilingGap {
+		didSet {
+			Settings.tilingGap = tilingGap
+			onChange?()
+		}
+	}
+
+	var tilingMargin = Settings.tilingMargin {
+		didSet {
+			Settings.tilingMargin = tilingMargin
+			onChange?()
+		}
+	}
+
+	var tilingMainShare = Settings.tilingMainShare {
+		didSet {
+			Settings.tilingMainShare = tilingMainShare
+			onChange?()
+		}
+	}
+
+	var tilingPresets = Settings.tilingPresets {
+		didSet {
+			Settings.tilingPresets = tilingPresets
+			onChange?()
+		}
+	}
 }

@@ -28,6 +28,7 @@ struct WindowCard: View {
 			)
 			.frame(width: slot.width, height: Theme.Card.labelHeight)
 			WindowThumbnail(window: window, image: image, size: thumbSize, isSelected: isSelected)
+				.markBadge(controller.state.markNumber(window.id))
 				.frame(width: slot.width, height: slot.height)
 		}
 		.padding([.horizontal, .top], Theme.Card.inset)
@@ -57,7 +58,7 @@ struct WindowCard: View {
 
 	private func hoverChanged(_ inside: Bool) {
 		isHovering = inside
-		if inside { controller.hover(window.id) }
+		if inside { controller.hover(window.id) } else { controller.hoverEnded(window.id) }
 	}
 
 	private func select() {

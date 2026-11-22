@@ -62,6 +62,25 @@ final class SwitcherController {
 
 	var tapIsRunning: Bool { tap.isRunning }
 
+	// Drag-to-tile (see SwitcherController+Tiling).
+	let dragTracker = DragTracker()
+	let tilingStore = TilingStore()
+	let tiler = WindowTiler()
+	private(set) lazy var tilingOverlay = TilingOverlayPanel(state: state)
+	/// The click that ends a drag reaches the card too; it mustn't switch windows.
+	var ignoresNextClick = false
+	/// The gap and margin the tiled windows were last placed with; changing either in
+	/// settings re-tiles them (after a short pause, while a slider is still moving).
+	var tilingSpacing = (gap: Settings.tilingGap, margin: Settings.tilingMargin)
+	var retileWork: DispatchWorkItem?
+	/// The card under the pointer, whether or not hovering has selected it.
+	private(set) var pointerWindowID: CGWindowID?
+
+	var isActive: Bool { phase == .active }
+	var panelFrame: CGRect? { panel.frame }
+	var panelScreen: NSScreen? { panel.screen }
+	func panelOwns(_ window: NSWindow?) -> Bool { panel.owns(window) }
+
 	private func trace(_ message: @autoclosure () -> String) {
 		guard ProcessInfo.processInfo.environment["CYCLE_TRACE"] != nil else { return }
 		FileHandle.standardError.write(
@@ -70,6 +89,7 @@ final class SwitcherController {
 
 	func start() {
 		mru.start()
+		setUpDragTracker()
 		tap.handler = { [weak self] type, event in
 			// The tap runs on the main run loop.
 			MainActor.assumeIsolated { self?.handle(type, event) ?? false }
@@ -134,10 +154,15 @@ final class SwitcherController {
 			}
 			switch keyCode {
 			case Key.escape:
-				if state.isShowingSettings {
+				if state.drag != nil {
+					dragTracker.reset()
+					cancelDrag()
+				} else if state.isShowingSettings {
 					closeSettings()
 				} else if !state.searchQuery.isEmpty {
 					setQuery("")
+				} else if !state.markedIDs.isEmpty {
+					state.markedIDs = []
 				} else {
 					cancel()
 				}
@@ -179,12 +204,18 @@ final class SwitcherController {
 	/// Releasing the modifier ends the session, switching to the highlighted window — a
 	/// filtered one included (not while settings are open, or in confirm mode).
 	private var holdsOnModifier: Bool {
+		switchesOnRelease && state.drag == nil
+	}
+
+	/// The session ends when the modifier is let go (not in confirm mode or with settings
+	/// open). A drag in progress holds it open until the drop.
+	var switchesOnRelease: Bool {
 		sessionMode == .onKeyRelease && !state.isShowingSettings
 	}
 
 	/// The modifier's actual state, read from the event system rather than inferred from
 	/// the events the tap happened to see.
-	private var modifierPhysicallyHeld: Bool {
+	var modifierPhysicallyHeld: Bool {
 		CGEventSource.flagsState(.combinedSessionState).contains(sessionModifier.flag)
 	}
 
@@ -277,6 +308,7 @@ final class SwitcherController {
 		mouseSelectionInitialLocation = NSEvent.mouseLocation
 		trace("present")
 		panel.show()
+		dragTracker.start()
 		captureThumbnails()
 		outsideClickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [
 			.leftMouseDown, .rightMouseDown,
@@ -423,6 +455,10 @@ final class SwitcherController {
 		outsideClickMonitor = nil
 		thumbnails.cancelPending()
 		if state.isShowingSettings { closeSettings() }
+		dragTracker.stop()
+		cancelDrag()
+		pointerWindowID = nil
+		state.markedIDs = []
 		panel.hide()
 	}
 
@@ -500,6 +536,7 @@ final class SwitcherController {
 	/// A setting changed in the panel: redraw an open switcher in the new arrangement.
 	private func settingsChanged() {
 		guard phase == .active else { return }
+		retileIfSpacingChanged()
 		let recent = state.recentOrder
 		state.allWindows = Settings.layout == .grouped ? WindowGroup.groupedOrder(recent) : recent
 		let selected = state.selectedID
@@ -612,11 +649,35 @@ final class SwitcherController {
 		}
 	}
 
+	/// Windows were tiled: once the apps have redrawn, re-read their frames (so previews
+	/// take their new shapes) and capture them again.
+	func windowsMoved(_ ids: [CGWindowID]) {
+		let thisGeneration = generation
+		DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+			guard let self, self.phase == .active, self.generation == thisGeneration else { return }
+			let fresh = WindowEnumerator.snapshot(
+				order: self.mru, includeWindowless: Settings.showWindowlessApps)
+			let byID = Dictionary(fresh.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+			self.state.recentOrder = self.state.recentOrder.map { byID[$0.id] ?? $0 }
+			self.state.allWindows = self.state.allWindows.map { byID[$0.id] ?? $0 }
+			self.state.windows = self.state.windows.map { byID[$0.id] ?? $0 }
+			self.panel.relayout()
+			self.thumbnails.capture(ids, best: false, maxAge: 0) { [weak self] id, captured in
+				guard let self, self.generation == thisGeneration else { return }
+				self.state.images[id] = captured.image
+				self.state.tints[id] = captured.tint
+			}
+		}
+	}
+
 	// MARK: Mouse (from the panel)
 
 	/// Hover only selects once the pointer has actually moved since the panel appeared,
 	/// so a resting pointer doesn't steal the keyboard selection.
 	func hover(_ id: CGWindowID) {
+		pointerWindowID = id
+		// Mid-drag the highlight stays on the dragged window.
+		guard state.drag == nil else { return }
 		guard let start = mouseSelectionInitialLocation else {
 			state.selectedID = id
 			return
@@ -628,7 +689,15 @@ final class SwitcherController {
 		}
 	}
 
+	func hoverEnded(_ id: CGWindowID) {
+		if pointerWindowID == id { pointerWindowID = nil }
+	}
+
 	func click(_ id: CGWindowID) {
+		if ignoresNextClick {
+			ignoresNextClick = false
+			return
+		}
 		state.selectedID = id
 		commit()
 	}

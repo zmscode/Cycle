@@ -35,6 +35,37 @@ Each window's controls (close, minimize, full screen, then quit) appear on it
 when it's highlighted or under the pointer. A quick ⌘Tab tap switches to the previous window
 without showing the panel, and pressing ⌘Tab rapidly never leaves the switcher stuck open.
 
+### Tiling
+
+Hold a window's card for a moment (or press and drag it) and a small copy of the screen
+appears under the switcher, showing the windows already tiled there. Drag onto it to tile:
+
+- onto an empty screen: the window fills it;
+- onto an edge of a tiled window: that window splits and the new one takes that half;
+- onto the middle of a tiled window: the new one takes its place (dragging a tiled window
+  onto another swaps them);
+- along the screen's outer edge: a full-height or full-width slot beside everything;
+- onto a slot of one of the presets under the board (Halves, Thirds, Quarters, Main + Stack,
+  Centre, Rows, Full): the screen is laid out that way, with the window in that slot and
+  windows already tiled filling the rest. Slots left over stay empty, shown dashed on the
+  board, until you drop a window into them.
+
+To tile several windows at once, right-click each one first: it gets a numbered badge
+(right-click again to unmark it, or press Esc to clear them all). Dragging any marked window
+brings the others along. Dropped on a preset slot, the window you dragged takes that slot and
+the others fill the next slots in the order you marked them; dropped on the screen or beside
+a tiled window, they go side by side (stacked, along a side edge), sharing the space evenly.
+
+Keep holding ⌘ to tile several windows in one go; let go of ⌘ and the drop switches to the
+window you dropped. Esc puts a drag down. The layout is remembered per screen until you
+quit, so later sessions add to it; a window you've moved or resized yourself drops out of
+it. The layout tree, frames and drop zones come from [RiftCore](https://github.com/zmscode/Rift).
+Windows on other Spaces and full-screen windows can't be tiled.
+
+The Tiling tile in settings picks which presets the board shows, the main window's share
+in Main + Stack and Centre, and the gaps between windows and around the screen's edges
+(down to none). Changing a gap re-tiles the windows already tiled straight away.
+
 There's no menu-bar item. Settings are behind the round gear in the top-right corner of the
 screen while the switcher is open (it keeps the switcher open until Return, a click or Escape; Escape closes settings first), or
 open Cycle again from Finder or Spotlight.

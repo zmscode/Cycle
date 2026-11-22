@@ -39,6 +39,7 @@ struct SettingsPanelView: View {
 							systemImage: "app.dashed", isOn: $settings.showWindowlessApps)
 					}
 				}
+				TilingTile(settings: settings)
 				PermissionsTile(
 					permissions: permissions,
 					tapIsRunning: permissions.accessibility ? tapIsRunning() : true,

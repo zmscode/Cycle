@@ -73,6 +73,38 @@ enum Theme {
 		static let margin: CGFloat = 16
 	}
 
+	/// Drag-to-tile: the board under the switcher and the frames it gives windows.
+	enum Tiling {
+		/// Space between tiled windows, and between them and the screen's edge.
+		static let gap: CGFloat = 10
+		static let minimumTileSize = CGSize(width: 240, height: 160)
+		/// Holding a card this long (or dragging it) picks it up.
+		static let holdDelay: TimeInterval = 0.22
+		static let dragThreshold: CGFloat = 5
+		static let boardWidth: CGFloat = 420
+		static let boardPadding: CGFloat = 12
+		static let boardHeaderHeight: CGFloat = 22
+		static let boardRadius: CGFloat = 24
+		static let tileRadius: CGFloat = 6
+		/// Space between the switcher and the board.
+		static let boardOffset: CGFloat = 16
+		/// The pointer still counts as on the board this far outside it.
+		static let boardSlack: CGFloat = 24
+		/// Near the screen's edge (this fraction of its shorter side), a drop goes along the
+		/// whole edge rather than beside one window.
+		static let outerBand: CGFloat = 0.05
+		/// A tiled window moved or resized by more than this is no longer tiled.
+		static let movedTolerance: CGFloat = 24
+		static let ghostWidth: CGFloat = 150
+		/// Preset chips under the board.
+		static let chipMaxWidth: CGFloat = 64
+		static let chipSpacing: CGFloat = 10
+		static let chipsGap: CGFloat = 12
+		static let chipLabelHeight: CGFloat = 18
+		/// Space between slots in a preset's small picture.
+		static let chipGap: CGFloat = 2
+	}
+
 	enum Controls {
 		static let diameter: CGFloat = 12
 		static let spacing: CGFloat = 4

@@ -1,0 +1,14 @@
+{
+  "originHash" : "8a729a8fdbac8d1e4fc15bc580fa1bfda567095d61872d19054dcdf2265f2e2f",
+  "pins" : [
+    {
+      "identity" : "rift",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/zmscode/Rift.git",
+      "state" : {
+        "revision" : "a7143ddd2d80f91a866158103ee5d0ba8877dc4a"
+      }
+    }
+  ],
+  "version" : 3
+}

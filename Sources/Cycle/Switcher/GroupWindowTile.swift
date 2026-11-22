@@ -36,6 +36,7 @@ struct GroupWindowTile: View {
 			}
 			.frame(width: slot.width, height: Theme.Group.labelHeight)
 			WindowThumbnail(window: window, image: image, size: thumb, isSelected: isSelected)
+				.markBadge(controller.state.markNumber(window.id))
 				.frame(width: slot.width, height: slot.height)
 		}
 		.padding([.horizontal, .top], Theme.Card.inset)
@@ -61,7 +62,7 @@ struct GroupWindowTile: View {
 
 	private func hoverChanged(_ inside: Bool) {
 		isHovering = inside
-		if inside { controller.hover(window.id) }
+		if inside { controller.hover(window.id) } else { controller.hoverEnded(window.id) }
 	}
 
 	private func select() {
