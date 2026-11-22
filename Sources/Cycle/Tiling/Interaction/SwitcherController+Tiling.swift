@@ -23,13 +23,15 @@ extension SwitcherController {
 			guard let self, let id = self.pointerWindowID else { return }
 			self.toggleMark(id)
 		}
-		dragTracker.onBegin = { [weak self] id in self?.beginDrag(id) }
+		dragTracker.onBegin = { [weak self] id in self?.beginDrag(id, fromBoard: false) }
 		dragTracker.onMove = { [weak self] point in self?.moveDrag(to: point) }
 		dragTracker.onEnd = { [weak self] in self?.endDrag() }
 	}
 
-	private func beginDrag(_ id: CGWindowID) {
-		guard isActive, let frame = panelFrame, let screen = panelScreen else { return }
+	/// Picks up `id`: a card from the switcher, or a tile from the board.
+	func beginDrag(_ id: CGWindowID, fromBoard: Bool) {
+		guard isActive, state.drag == nil, let frame = panelFrame, let screen = panelScreen
+		else { return }
 		let layout = tiling.layout(for: screen, windows: state.recentOrder)
 		// The board may be showing already; the drag takes it over.
 		let placement =
@@ -39,28 +41,75 @@ extension SwitcherController {
 		let board = TilingBoard(
 			layout: layout, visible: screen.visibleFrameTopLeft, placement: placement,
 			displayScale: screen.backingScaleFactor)
-		state.selectedID = id
-		// A marked window brings the other marked windows with it.
-		let ids = state.markedIDs.contains(id) ? draggableMarks() : [id]
-		state.drag = WindowDrag(
+		if state.windows.contains(where: { $0.id == id }) { state.selectedID = id }
+		// A marked card brings the other marked windows with it.
+		let ids = !fromBoard && state.markedIDs.contains(id) ? draggableMarks() : [id]
+		var drag = WindowDrag(
 			windowID: id, windowIDs: ids, screen: screen, board: board,
 			pointer: tilingOverlay.local(NSEvent.mouseLocation), target: nil)
-	}
-
-	private func moveDrag(to point: CGPoint) {
-		guard var drag = state.drag else { return }
-		drag.pointer = tilingOverlay.local(point)
-		drag.target = drag.board.target(at: drag.pointer, dragging: drag.windowIDs)
+		drag.fromBoard = fromBoard
 		state.drag = drag
 	}
 
-	private func endDrag() {
-		// The release also reaches the card as a click; this drag has handled it.
-		ignoresNextClick = true
+	func moveDrag(to point: CGPoint) {
+		guard var drag = state.drag else { return }
+		drag.pointer = tilingOverlay.local(point)
+		drag.target = drag.board.target(at: drag.pointer, dragging: drag.windowIDs)
+		dwell(on: &drag)
+		state.drag = drag
+	}
+
+	/// Resting on another display's chip in the board's header switches the board to that
+	/// display after a moment; moving off it calls that off.
+	private func dwell(on drag: inout WindowDrag) {
+		let chip = drag.board.placement.displays.first {
+			$0.rect.insetBy(dx: -3, dy: -3).contains(drag.pointer)
+		}
+		// On a display chip nothing is dropped, whatever's beneath it.
+		if chip != nil { drag.target = nil }
+		let hovered = chip?.display == drag.screen.displayUUID ? nil : chip?.display
+		guard hovered != drag.hoveredDisplay else { return }
+		drag.hoveredDisplay = hovered
+		displayDwellWork?.cancel()
+		displayDwellWork = nil
+		guard let hovered else { return }
+		let work = DispatchWorkItem { [weak self] in
+			MainActor.assumeIsolated { self?.switchDrag(to: hovered) }
+		}
+		displayDwellWork = work
+		DispatchQueue.main.asyncAfter(deadline: .now() + Theme.Tiling.displayDwell, execute: work)
+	}
+
+	/// Points the board at another display: dropping then tiles there.
+	private func switchDrag(to display: String) {
+		displayDwellWork = nil
+		guard var drag = state.drag, drag.hoveredDisplay == display, let frame = panelFrame,
+			let screen = NSScreen.screen(uuid: display)
+		else { return }
+		let placement = tilingOverlay.placement(
+			picturing: screen, below: frame, presets: Settings.tilingPresets)
+		drag.screen = screen
+		drag.hoveredDisplay = nil
+		drag.board = TilingBoard(
+			layout: tiling.layout(for: screen, windows: state.recentOrder),
+			visible: screen.visibleFrameTopLeft, placement: placement,
+			displayScale: screen.backingScaleFactor)
+		drag.target = drag.board.target(at: drag.pointer, dragging: drag.windowIDs)
+		drag.updatePreview()
+		state.drag = drag
+		NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+	}
+
+	func endDrag() {
 		guard let drag = state.drag else { return }
+		// The release also reaches the card as a click; this drag has handled it.
+		if !drag.fromBoard { ignoresNextClick = true }
 		cancelDrag()
-		guard let target = drag.target,
-			let layout = drag.board.dropping(drag.windowIDs, on: target)
+		if drag.untiles {
+			untile(drag.windowID)
+			return releaseIfModifierUp()
+		}
+		guard let target = drag.target, let layout = drag.result
 		else { return releaseIfModifierUp() }
 		if drag.windowIDs.count > 1 { state.markedIDs = [] }
 		let label: String = if case .preset(let preset, _) = target { preset.title } else { "Move" }
@@ -150,10 +199,13 @@ extension SwitcherController {
 	/// Puts the dragged window down without tiling anything. The board stays if the
 	/// screen is tiled (it was showing before the drag).
 	func cancelDrag() {
-		guard state.drag != nil else { return }
+		displayDwellWork?.cancel()
+		displayDwellWork = nil
+		guard let drag = state.drag else { return }
 		state.drag = nil
 		if state.board == nil {
 			tilingOverlay.hide()
+			if drag.fromBoard { hideBoardTiles() }
 		} else {
 			showBoardDividers()
 		}
@@ -185,7 +237,7 @@ extension SwitcherController {
 
 	/// Letting go of the modifier mid-drag doesn't end the session; once the drop is done it
 	/// does, switching to the highlighted (just dropped) window.
-	private func releaseIfModifierUp() {
+	func releaseIfModifierUp() {
 		if switchesOnRelease, !modifierPhysicallyHeld { commit() }
 	}
 }

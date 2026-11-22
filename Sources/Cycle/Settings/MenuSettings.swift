@@ -85,7 +85,7 @@ final class MenuSettings {
 		}
 	}
 
-	/// The preset editor's name field has the keyboard: the switcher lets keys through.
+	/// A name field (the preset editor's, or a new workspace's) has the keyboard: the switcher lets keys through.
 	@ObservationIgnored var isEditingText = false
 
 	var tilingFillsGaps = Settings.tilingFillsGaps {
@@ -123,6 +123,13 @@ final class MenuSettings {
 		}
 	}
 
+	var tilingWorkspaces = Settings.tilingWorkspaces {
+		didSet {
+			Settings.tilingWorkspaces = tilingWorkspaces
+			onChange?()
+		}
+	}
+
 	/// Picks up settings changed outside the panel (`cycle.config` edited by hand).
 	func reload() {
 		func sync<T: Equatable>(_ path: ReferenceWritableKeyPath<MenuSettings, T>, _ value: T) {
@@ -144,5 +151,6 @@ final class MenuSettings {
 		sync(\.tilingShowsDividers, Settings.tilingShowsDividers)
 		sync(\.tilingAnimates, Settings.tilingAnimates)
 		sync(\.tilingAnimationDuration, Settings.tilingAnimationDuration)
+		sync(\.tilingWorkspaces, Settings.tilingWorkspaces)
 	}
 }

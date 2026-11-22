@@ -7,6 +7,8 @@ struct PresetThumbnail: View {
 	let preset: TilingPreset
 	let mainShare: Double
 	var highlightedSlots: Set<Int> = []
+	/// Numbers drawn in slots: which marked window goes where.
+	var slotNumbers: [Int: Int] = [:]
 	var isEnabled = true
 
 	var body: some View {
@@ -22,6 +24,13 @@ struct PresetThumbnail: View {
 						lit ? Theme.Colors.mark : .white.opacity(isEnabled ? 0.28 : 0.1)))
 				if lit {
 					context.stroke(path, with: .color(.white.opacity(0.6)), lineWidth: 1)
+				}
+				if let number = slotNumbers[slot] {
+					context.draw(
+						Text(number, format: .number)
+							.font(.system(size: 8, weight: .bold).monospacedDigit())
+							.foregroundStyle(.white),
+						at: CGPoint(x: frame.midX, y: frame.midY))
 				}
 			}
 		}

@@ -6,10 +6,12 @@ extension TilingBoard {
 	/// The layout after dropping `ids` (the window picked up first) on `target`; nil when
 	/// nothing changes. Several windows go side by side, or stacked along a screen edge or
 	/// a split's edge, sharing the space evenly.
-	func dropping(_ ids: [CGWindowID], on target: TileTarget) -> RiftLayout<CGWindowID>? {
+	func dropping(_ ids: [CGWindowID], on target: TileTarget, slotOffset: Int = 0)
+		-> RiftLayout<CGWindowID>?
+	{
 		guard let first = ids.first else { return nil }
 		if case .preset(let preset, let slot) = target {
-			return applying(preset, putting: ids, from: slot)
+			return applying(preset, putting: ids, from: slot, offset: slotOffset)
 		}
 		if ids.count == 1 { return dropping(first, on: target) }
 
@@ -58,25 +60,16 @@ extension TilingBoard {
 	}
 
 	/// `preset` with `ids` in it, then the windows already tiled (main slot first), then
-	/// placeholders in any slots left over. One window goes in `slot`, the one under the
-	/// pointer. Several (marked) windows go in reading order, left to right and top to
-	/// bottom, so window 1 takes the first slot, window 2 the next, and so on. Windows that
-	/// don't fit stay where they are, untiled.
-	private func applying(_ preset: TilingPreset, putting ids: [CGWindowID], from slot: Int)
-		-> RiftLayout<CGWindowID>
-	{
+	/// placeholders in any slots left over. Windows that don't fit stay where they are,
+	/// untiled.
+	private func applying(
+		_ preset: TilingPreset, putting ids: [CGWindowID], from slot: Int, offset: Int
+	) -> RiftLayout<CGWindowID> {
 		let dragged = Set(ids)
 		let tiled = (layout?.paneIDs ?? []).filter {
 			!dragged.contains($0) && !TilingSlot.isPlaceholder($0)
 		}
-		var assigned: [Int: CGWindowID] = [:]
-		if ids.count > 1 {
-			for (slot, id) in zip(preset.readingOrder(mainShare: mainShare), ids) {
-				assigned[slot] = id
-			}
-		} else if let first = ids.first {
-			assigned[slot] = first
-		}
+		var assigned = assignment(of: preset, putting: ids, from: slot, offset: offset)
 		var waiting = tiled
 		for other in preset.slotOrder(mainShare: mainShare) where assigned[other] == nil {
 			guard !waiting.isEmpty else { break }
@@ -85,6 +78,27 @@ extension TilingBoard {
 		return preset.layout(mainShare: mainShare).mapPanes {
 			assigned[$0] ?? TilingSlot.placeholder($0)
 		}
+	}
+
+	/// Which slot of `preset` each of `ids` takes. One window goes in `slot`, the one under
+	/// the pointer. Several (marked) windows go in reading order, left to right and top to
+	/// bottom, so window 1 takes the first slot, window 2 the next, and so on; `offset`
+	/// (from scrolling) rotates them around the slots, and through which windows are left
+	/// out when there are more windows than slots.
+	func assignment(
+		of preset: TilingPreset, putting ids: [CGWindowID], from slot: Int, offset: Int
+	) -> [Int: CGWindowID] {
+		guard ids.count > 1 else { return ids.first.map { [slot: $0] } ?? [:] }
+		let order = preset.readingOrder(mainShare: mainShare)
+		let length = max(order.count, ids.count)
+		let padded: [CGWindowID?] = ids + Array(repeating: nil, count: length - ids.count)
+		let shift = ((offset % length) + length) % length
+		let rotated = Array(padded[(length - shift)...] + padded[..<(length - shift)])
+		var assigned: [Int: CGWindowID] = [:]
+		for (slot, id) in zip(order, rotated) {
+			if let id { assigned[slot] = id }
+		}
+		return assigned
 	}
 
 	/// `ids` side by side along `axis`, sharing it evenly.

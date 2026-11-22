@@ -19,6 +19,12 @@ final class SwitcherController {
 		})
 		settings.settings.onChange = { [weak self] in self?.settingsChanged() }
 		settings.currentLayout = { [weak self] in self?.currentPresetLayout() }
+		settings.captureWorkspace = { [weak self] name in
+			self?.tiling.captureWorkspace(named: name)
+		}
+		settings.applyWorkspace = { [weak self] workspace in
+			self?.tiling.apply(workspace) ?? 0
+		}
 		return settings
 	}()
 
@@ -69,6 +75,8 @@ final class SwitcherController {
 	/// Grips on the board's dividers during a session.
 	let boardDividers = DividerHandles(style: .board)
 	private(set) lazy var tilingOverlay = TilingOverlayPanel(state: state)
+	/// The board's hit layer, for picking up its tiles.
+	let boardTilePanel = BoardTilePanel()
 	/// The click that ends a drag reaches the card too; it mustn't switch windows.
 	var ignoresNextClick = false
 	/// The gap and margin the tiled windows were last placed with; changing either in
@@ -77,6 +85,8 @@ final class SwitcherController {
 	var retileWork: DispatchWorkItem?
 	/// The card under the pointer, whether or not hovering has selected it.
 	var pointerWindowID: CGWindowID?
+	/// Switches the board to the display chip the pointer rests on, mid-drag.
+	var displayDwellWork: DispatchWorkItem?
 
 	var isActive: Bool { phase == .active }
 	var panelFrame: CGRect? { panel.frame }
@@ -101,6 +111,8 @@ final class SwitcherController {
 		mru.start()
 		setUpDragTracker()
 		setUpBoard()
+		setUpBoardTiles()
+		listenForWorkspaceRequests()
 		tap.handler = { [weak self] type, event in
 			// The tap runs on the main run loop.
 			MainActor.assumeIsolated { self?.handle(type, event) ?? false }

@@ -23,6 +23,8 @@ final class SwitcherState {
 	var board: TilingBoard?
 	/// A brief note after tiling from the keyboard ("Thirds · Helium left untiled").
 	var tilingNotice: String?
+	/// Tiled windows bigger than their slot (an app's minimum size): outlined on the board.
+	var unfitIDs: Set<CGWindowID> = []
 	/// Windows right-clicked for tiling together, in the order they were marked.
 	var markedIDs: [CGWindowID] = []
 

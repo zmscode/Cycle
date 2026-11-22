@@ -8,4 +8,6 @@ struct BoardPlacement {
 	var screen: CGRect
 	/// The preset chips in a row under it.
 	var chips: [PresetChip]
+	/// The displays, in the header (none with a single display).
+	var displays: [DisplayChip] = []
 }

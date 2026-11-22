@@ -22,6 +22,8 @@ struct TilingConfig: Codable, Equatable {
 	var animate = true
 	/// How long the glide takes, in seconds.
 	var animationDuration = 0.2
+	/// Saved workspaces: named layouts across every display.
+	var workspaces: [Workspace] = []
 
 	init() {}
 
@@ -39,5 +41,6 @@ struct TilingConfig: Codable, Equatable {
 		animate = container.value(.animate, default: defaults.animate)
 		animationDuration = container.value(
 			.animationDuration, default: defaults.animationDuration)
+		workspaces = container.value(.workspaces, default: defaults.workspaces)
 	}
 }

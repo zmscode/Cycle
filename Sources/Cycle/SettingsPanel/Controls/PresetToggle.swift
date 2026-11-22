@@ -8,8 +8,14 @@ struct PresetToggle: View {
 	/// "⌘1"… while it's shown (empty past the ninth), nil while hidden.
 	let shortcut: String?
 	let onToggle: (TilingPreset) -> Void
-	/// Custom presets can be edited (a pencil on hover).
+	/// Custom presets can be edited (a pencil on hover); built-ins can be adjusted, which
+	/// opens a custom copy in the editor (sliders on hover).
 	var onEdit: (() -> Void)?
+
+	private var editIcon: String { preset.isCustom ? "pencil" : "slider.horizontal.3" }
+	private var editLabel: String {
+		preset.isCustom ? "Edit \(preset.title)" : "Adjust \(preset.title)…"
+	}
 
 	@State private var isHovered = false
 
@@ -50,7 +56,7 @@ struct PresetToggle: View {
 		.overlay(alignment: .topLeading) {
 			if let onEdit, isHovered {
 				Button(action: onEdit) {
-					Image(systemName: "pencil")
+					Image(systemName: editIcon)
 						.font(.system(size: 8, weight: .bold))
 						.foregroundStyle(.white)
 						.frame(width: 16, height: 16)
@@ -58,15 +64,17 @@ struct PresetToggle: View {
 				}
 				.buttonStyle(.plain)
 				.offset(x: -2, y: -2)
-				.help("Edit \(preset.title)")
-				.accessibilityLabel("Edit \(preset.title)")
+				.help(editLabel)
+				.accessibilityLabel(editLabel)
 				.transition(.scale.combined(with: .opacity))
 			}
 		}
 		.onHover { hovering in withAnimation(.snappy(duration: 0.15)) { isHovered = hovering } }
 		.sensoryFeedback(.selection, trigger: isOn)
 		.accessibilityLabel(preset.title)
-		.accessibilityValue(isOn ? "Shown" + (shortcut.map { $0.isEmpty ? "" : ", \($0)" } ?? "") : "Hidden")
+		.accessibilityValue(
+			isOn ? "Shown" + (shortcut.map { $0.isEmpty ? "" : ", \($0)" } ?? "") : "Hidden"
+		)
 		.accessibilityAddTraits(isOn ? .isSelected : [])
 	}
 

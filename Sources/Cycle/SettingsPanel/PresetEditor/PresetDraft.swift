@@ -14,6 +14,9 @@ struct PresetDraft: Equatable {
 	var layout: RiftLayout<Int>
 	/// Not saved yet (no Delete).
 	let isNew: Bool
+	/// The built-in preset this is an adjusted copy of: saving puts the copy in its place
+	/// on the board, so it keeps the built-in's ⌘ number.
+	let replacing: String?
 
 	/// A new preset, starting as `layout`.
 	init(startingWith layout: RiftLayout<Int>, name: String) {
@@ -21,6 +24,16 @@ struct PresetDraft: Equatable {
 		self.name = name
 		self.layout = layout
 		isNew = true
+		replacing = nil
+	}
+
+	/// A custom copy of a built-in preset, to change its proportions.
+	init(adjusting preset: BuiltinPreset, mainShare: Double) {
+		id = CustomPreset.newID()
+		name = "\(preset.title) Adjusted"
+		layout = preset.layout(mainShare: mainShare)
+		isNew = true
+		replacing = preset.rawValue
 	}
 
 	init(editing preset: CustomPreset) {
@@ -28,6 +41,7 @@ struct PresetDraft: Equatable {
 		name = preset.name
 		layout = preset.layout
 		isNew = false
+		replacing = nil
 	}
 
 	var slotCount: Int { layout.paneIDs.count }
@@ -38,7 +52,9 @@ struct PresetDraft: Equatable {
 	mutating func split(_ slot: Int, along axis: RiftAxis) {
 		guard canSplit else { return }
 		let new = (layout.paneIDs.max() ?? 0) + 1
-		layout = layout.splitting(slot, with: new, edge: axis == .horizontal ? .right : .bottom) ?? layout
+		layout =
+			layout.splitting(slot, with: new, edge: axis == .horizontal ? .right : .bottom)
+			?? layout
 	}
 
 	mutating func remove(_ slot: Int) {
@@ -47,7 +63,8 @@ struct PresetDraft: Equatable {
 	}
 
 	mutating func setPosition(_ position: Double, ofSplit id: UUID) {
-		let clamped = min(max(position, Self.positionRange.lowerBound), Self.positionRange.upperBound)
+		let clamped = min(
+			max(position, Self.positionRange.lowerBound), Self.positionRange.upperBound)
 		layout = layout.settingPosition(clamped, ofSplit: id) ?? layout
 	}
 

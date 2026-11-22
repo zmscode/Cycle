@@ -11,6 +11,7 @@ extension SwitcherController {
 		tiling.onLayoutChanged = { [weak self] display, layout in
 			self?.layoutChanged(display, layout)
 		}
+		tiling.onUnfitChanged = { [weak self] unfit in self?.state.unfitIDs = unfit }
 		boardDividers.onBegin = { [weak self] item, pointer in
 			guard let self, let real = self.realPoint(fromBoard: pointer) else { return }
 			self.tiling.beginResize(display: item.display, splitID: item.splitID, pointer: real)
@@ -36,12 +37,15 @@ extension SwitcherController {
 		state.board = TilingBoard(
 			layout: layout, visible: screen.visibleFrameTopLeft, placement: placement,
 			displayScale: screen.backingScaleFactor)
+		state.unfitIDs = tiling.unfit
+		showBoardTiles()
 		showBoardDividers()
 	}
 
 	func hideBoard() {
 		state.board = nil
 		boardDividers.hideAll()
+		hideBoardTiles()
 		if state.drag == nil { tilingOverlay.hide() }
 	}
 
@@ -108,6 +112,8 @@ extension SwitcherController {
 		let height = NSScreen.screens.first?.frame.height ?? 0
 		let appKit = CGPoint(x: point.x, y: height - point.y)
 		if let frame = panelFrame, frame.contains(appKit) { return false }
+		// The board's tiles have a menu of their own.
+		if isOnBoard(appKit) { return false }
 		if settingsPanel.isVisible, settingsPanel.frame?.contains(appKit) == true { return false }
 		tiling.undo { [weak self] label in
 			self?.showNotice(label.map { "Undid \($0)" } ?? "Nothing to undo")

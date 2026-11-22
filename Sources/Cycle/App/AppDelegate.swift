@@ -12,6 +12,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 		if !Permissions.shared.allGranted || CommandLine.arguments.contains("--setup") {
 			PermissionsWindow.shared.show()
 		}
+		// `--workspace <name>` with no Cycle running before: apply it once windows are known.
+		let arguments = CommandLine.arguments
+		if let index = arguments.firstIndex(of: "--workspace"), arguments.indices.contains(index + 1)
+		{
+			DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
+				self?.controller.applyWorkspace(named: arguments[index + 1])
+			}
+		}
 		// `--settings` opens the settings panel at launch (for checking its layout).
 		if CommandLine.arguments.contains("--settings") {
 			DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in

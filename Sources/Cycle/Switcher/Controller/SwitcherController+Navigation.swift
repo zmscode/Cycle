@@ -56,6 +56,12 @@ extension SwitcherController {
 	/// Trackpad scrolling moves one per `scrollStepDistance` points with a light haptic
 	/// tick per step; momentum keeps going at `momentumWeight`, so flicks glide.
 	func scrolled(_ event: CGEvent) {
+		// Mid-drag over a preset with several windows, scrolling rotates them through its
+		// slots instead (stepping through the switcher is no use then).
+		let advance: (Int) -> Void =
+			state.drag?.rotatesSlots == true
+			? { [weak self] delta in self?.state.drag?.slotOffset += delta }
+			: { [weak self] delta in self?.step(delta) }
 		let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
 		if continuous {
 			let momentum = event.getIntegerValueField(.scrollWheelEventMomentumPhase) != 0
@@ -66,7 +72,7 @@ extension SwitcherController {
 			let delta = abs(vertical) >= abs(horizontal) ? vertical : horizontal
 			scrollRemainder += delta * (momentum ? momentumWeight : 1)
 			while abs(scrollRemainder) >= scrollStepDistance {
-				step(scrollRemainder > 0 ? -1 : 1)
+				advance(scrollRemainder > 0 ? -1 : 1)
 				scrollRemainder -= scrollRemainder > 0 ? scrollStepDistance : -scrollStepDistance
 				NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
 			}
@@ -74,7 +80,7 @@ extension SwitcherController {
 			let lines = event.getIntegerValueField(.scrollWheelEventDeltaAxis1)
 			guard lines != 0 else { return }
 			scrollRemainder = 0
-			step(lines > 0 ? -1 : 1)
+			advance(lines > 0 ? -1 : 1)
 		}
 	}
 

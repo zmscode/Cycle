@@ -5,6 +5,8 @@ struct BoardTile: View {
 	let window: SwitcherWindow?
 	let image: NSImage?
 	let role: BoardTileRole
+	/// The window is bigger than its slot (its app won't go smaller).
+	var isUnfit = false
 
 	private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: Theme.Tiling.tileRadius) }
 
@@ -31,8 +33,20 @@ struct BoardTile: View {
 			.overlay {
 				if case .incoming = role {
 					DropHighlight()
+				} else if isUnfit {
+					shape.strokeBorder(Theme.Colors.minimize, lineWidth: 1.5)
 				} else {
 					shape.strokeBorder(.white.opacity(0.18))
+				}
+			}
+			.overlay(alignment: .bottomLeading) {
+				if isUnfit, role.isResting {
+					Image(systemName: "exclamationmark.triangle.fill")
+						.font(.system(size: 9, weight: .bold))
+						.foregroundStyle(Theme.Colors.minimize)
+						.shadow(color: .black.opacity(0.5), radius: 2)
+						.padding(3)
+						.help("This window won't shrink to fit its slot")
 				}
 			}
 			.overlay(alignment: .topTrailing) {
@@ -41,6 +55,8 @@ struct BoardTile: View {
 				}
 			}
 			.opacity(opacity)
+			.accessibilityLabel(window?.appName ?? "Window")
+			.accessibilityValue(isUnfit ? "Doesn't fit its slot" : "")
 	}
 
 	private var number: Int? {

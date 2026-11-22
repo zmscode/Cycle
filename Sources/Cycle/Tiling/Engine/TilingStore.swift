@@ -94,9 +94,12 @@ final class TilingStore {
 
 	/// Remembers `layout` for `display`, as dropped. Its windows leave every other display's
 	/// layout, and windows away from this display are let go (the new arrangement wins).
+	/// Returns the other displays a window left.
+	@discardableResult
 	func save(
 		_ layout: RiftLayout<CGWindowID>, for display: String, windows: [SwitcherWindow]
-	) {
+	) -> Set<String> {
+		var left: Set<String> = []
 		let byID = Dictionary(windows.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
 		let ids = Set(layout.paneIDs.filter { !TilingSlot.isPlaceholder($0) })
 		for id in ids where identities[id] == nil {
@@ -110,6 +113,7 @@ final class TilingStore {
 				guard case .window(let window) = slot, let id = bindings[window], ids.contains(id)
 				else { continue }
 				rest = rest?.removingProportionally(slot)
+				left.insert(other)
 			}
 			remembered[other] = rest
 		}
@@ -124,6 +128,7 @@ final class TilingStore {
 				?? .window(RememberedWindow(windowID: id, bundleID: "", title: ""))
 		}
 		onChange?()
+		return left
 	}
 
 	func recordPlacement(_ id: CGWindowID, frame: CGRect) {
@@ -146,6 +151,12 @@ final class TilingStore {
 			return display
 		}
 		return nil
+	}
+
+	/// The display a tiled window is laid out on.
+	func display(of id: CGWindowID) -> String? {
+		guard let identity = identities[id] else { return nil }
+		return remembered.first { $0.value.contains(.window(identity)) }?.key
 	}
 
 	/// `display`'s remembered tree, for undo.
@@ -231,6 +242,33 @@ final class TilingStore {
 			}
 		}
 		return displays(holding: found)
+	}
+
+	/// Lays `display` out as `tree` (a workspace): the windows tiled there now are let go,
+	/// the tree's windows leave any other display, and they're bound as they turn up.
+	func replace(_ tree: RiftLayout<RememberedSlot>, for display: String) {
+		for slot in remembered[display]?.paneIDs ?? [] {
+			guard case .window(let window) = slot, let id = bindings[window] else { continue }
+			unbind(id)
+		}
+		let incoming = Set(
+			tree.paneIDs.compactMap { slot -> RememberedWindow? in
+				if case .window(let window) = slot { window } else { nil }
+			})
+		for (other, otherTree) in remembered where other != display {
+			var rest: RiftLayout<RememberedSlot>? = otherTree
+			for slot in otherTree.paneIDs {
+				guard case .window(let window) = slot, incoming.contains(window) else { continue }
+				if let id = bindings[window] { unbind(id) }
+				rest = rest?.removingProportionally(slot)
+			}
+			remembered[other] = rest
+		}
+		for window in incoming {
+			if let id = bindings[window] { unbind(id) }
+		}
+		remembered[display] = tree
+		onChange?()
 	}
 
 	/// Forgets every away window (layout restoring was turned off).

@@ -109,6 +109,13 @@ enum Theme {
 		static let chipLabelHeight: CGFloat = 18
 		/// Space between slots in a preset's small picture.
 		static let chipGap: CGFloat = 2
+		/// The displays in the board's header, while there's more than one.
+		static let displayChipHeight: CGFloat = 16
+		/// A window this much bigger than its slot (a share of the slot) gets room made for
+		/// it; a bigger one is outlined on the board instead.
+		static let fitTolerance: CGFloat = 0.15
+		/// Resting on a display chip this long mid-drag switches the board to it.
+		static let displayDwell: TimeInterval = 0.4
 	}
 
 	enum Controls {

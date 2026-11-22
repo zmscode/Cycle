@@ -25,9 +25,14 @@ struct TilingBoardCard: View {
 				.font(.caption.weight(.medium))
 				.foregroundStyle(.secondary)
 				.contentTransition(.opacity)
+				.lineLimit(1)
+				.frame(width: captionWidth, alignment: .leading)
 				.offset(
 					x: placement.screen.minX,
 					y: placement.card.minY + Theme.Tiling.boardPadding)
+			ForEach(placement.displays) { chip in
+				displayChip(chip)
+			}
 			screen
 				.offset(x: board.rect.minX, y: board.rect.minY)
 			ForEach(placement.chips) { chip in
@@ -35,11 +40,51 @@ struct TilingBoardCard: View {
 			}
 		}
 		.animation(reduceMotion ? nil : Theme.Motion.fade, value: drag?.target)
+		.animation(reduceMotion ? nil : Theme.Motion.fade, value: drag?.slotOffset)
 		.environment(\.colorScheme, .dark)
 	}
 
+	/// The header's width left of the display chips.
+	private var captionWidth: CGFloat {
+		guard let first = placement.displays.first else { return placement.screen.width }
+		return max(first.rect.minX - placement.screen.minX - 8, 40)
+	}
+
+	/// A display in the header: the one the board shows is lit; the one being rested on
+	/// is outlined until the board switches to it.
+	private func displayChip(_ chip: DisplayChip) -> some View {
+		let shown = (drag?.screen.displayUUID ?? currentDisplay) == chip.display
+		let hovered = drag?.hoveredDisplay == chip.display
+		let shape = RoundedRectangle(cornerRadius: 3)
+		return shape
+			.fill(shown ? Theme.Colors.mark.opacity(0.55) : .white.opacity(0.1))
+			.strokeBorder(
+				hovered ? .white : shown ? Theme.Colors.mark : .white.opacity(0.25),
+				lineWidth: hovered ? 1.5 : 1
+			)
+			.overlay {
+				Text(chip.number, format: .number)
+					.font(.system(size: 9, weight: .bold).monospacedDigit())
+					.foregroundStyle(shown ? .white : .secondary)
+			}
+			.frame(width: chip.rect.width, height: chip.rect.height)
+			.scaleEffect(hovered ? 1.15 : 1)
+			.offset(x: chip.rect.minX, y: chip.rect.minY)
+			.animation(reduceMotion ? nil : Theme.Motion.fade, value: hovered)
+			.accessibilityHidden(true)
+	}
+
+	/// The display the board pictures when nothing is dragged: the switcher's.
+	private var currentDisplay: String? {
+		NSScreen.screens.first {
+			$0.visibleFrameTopLeft == board.visible
+		}?.displayUUID
+	}
+
 	private var caption: String {
-		guard let drag else { return "Drag a divider to resize · hold a window to tile it" }
+		guard let drag else {
+			return "Drag a divider or a tile · right-click a tile for more"
+		}
 		let count = drag.windowIDs.count
 		var text =
 			count > 1
@@ -48,12 +93,18 @@ struct TilingBoardCard: View {
 			: action
 		let displaced = drag.displaced
 		if displaced > 0 { text += " · \(displaced) left untiled" }
+		if drag.rotatesSlots { text += " · scroll to rotate" }
 		return text
 	}
 
 	/// Where the drop goes, in words.
 	private var action: String {
 		switch drag?.target {
+		case nil where drag?.untiles == true: "Release to take it out of the layout"
+		case nil where drag?.fromBoard == true: "Drop on a tile or edge · off the board to untile"
+		case nil where drag?.hoveredDisplay != nil: "Switching display…"
+		case nil where !(drag?.board.placement.displays.isEmpty ?? true):
+			"Drop on the screen or a preset · rest on a display to switch"
 		case nil: "Drop on the screen or a preset"
 		case .fill?: "Fill the screen"
 		case .edge(.left)?: "Full height on the left"
@@ -165,19 +216,26 @@ struct TilingBoardCard: View {
 				BoardTile(
 					window: state.windows.first { $0.id == id }
 						?? state.recentOrder.first { $0.id == id },
-					image: state.images[id], role: role)
+					image: state.images[id], role: role, isUnfit: state.unfitIDs.contains(id))
 			}
 		}
 		.frame(width: rect.width, height: rect.height)
 		.offset(x: rect.minX, y: rect.minY)
 	}
 
-	/// The slots a drop on `preset` fills: the hovered one for one window; for several, the
-	/// first ones left to right, since marked windows fill in that order.
+	/// The slots a drop on `preset` fills: the hovered one for one window; for several,
+	/// the ones they'll take (mark order, left to right, rotated by scrolling).
 	private func litSlots(of preset: TilingPreset, hovered: Int?) -> Set<Int> {
-		guard let hovered, let drag else { return [] }
-		guard drag.windowIDs.count > 1 else { return [hovered] }
-		return Set(preset.readingOrder(mainShare: board.mainShare).prefix(drag.windowIDs.count))
+		guard hovered != nil, let drag else { return [] }
+		return Set(drag.slotAssignment.keys)
+	}
+
+	/// Each lit slot's window number, when several windows are dragged.
+	private func slotNumbers(of preset: TilingPreset, hovered: Int?) -> [Int: Int] {
+		guard hovered != nil, let drag, drag.windowIDs.count > 1 else { return [:] }
+		return drag.slotAssignment.compactMapValues { id in
+			drag.windowIDs.firstIndex(of: id).map { $0 + 1 }
+		}
 	}
 
 	private func chipView(_ chip: PresetChip) -> some View {
@@ -186,7 +244,8 @@ struct TilingBoardCard: View {
 		return VStack(spacing: 4) {
 			PresetThumbnail(
 				preset: chip.preset, mainShare: board.mainShare,
-				highlightedSlots: litSlots(of: chip.preset, hovered: slot)
+				highlightedSlots: litSlots(of: chip.preset, hovered: slot),
+				slotNumbers: slotNumbers(of: chip.preset, hovered: slot)
 			)
 			.frame(width: chip.rect.width, height: chip.rect.height)
 			.overlay(alignment: .topLeading) {

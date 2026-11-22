@@ -18,7 +18,7 @@ final class TilingCoordinator {
 	let loader = WindowLoader()
 	let screenDividers = DividerHandles(style: .screen)
 	private let memory = LayoutMemory()
-	private let watcher = TiledWindowWatcher()
+	let watcher = TiledWindowWatcher()
 	private var restoreWork: [DispatchWorkItem] = []
 	/// Gap filling as last applied: turning it on closes the gaps away windows left.
 	private var fillsGaps = Settings.tilingFillsGaps
@@ -32,6 +32,13 @@ final class TilingCoordinator {
 	var pendingLive: TilingBoard?
 	/// Recent tiling changes, newest last, for undo.
 	var history: [TilingChange] = []
+	/// The smallest size each app's windows have been seen to take (by bundle id); a zero
+	/// side isn't known. See +Fitting.
+	var minimumSizes: [String: CGSize] = [:]
+	/// Tiled windows bigger than their slot, which the board outlines.
+	var unfit: Set<CGWindowID> = []
+	/// The windows that don't fit their slots changed.
+	var onUnfitChanged: ((Set<CGWindowID>) -> Void)?
 
 	init() {
 		store = TilingStore(remembered: Settings.tilingRestoresLayouts ? memory.load() : [:])
@@ -86,11 +93,27 @@ final class TilingCoordinator {
 	) {
 		guard let display = screen.displayUUID else { return }
 		record(display, label: label)
-		store.save(layout, for: display, windows: windows)
+		let left = store.save(layout, for: display, windows: windows)
 		var board = board
 		board.layout = store.layout(for: display)
 		onLayoutChanged?(display, board.layout)
-		place(board, windows: windows)
+		place(board, windows: windows, display: display)
+		// A window moved here from another display: that one closes up behind it.
+		for other in left { onLayoutChanged?(other, store.layout(for: other)) }
+		if !left.isEmpty { retile(left, windows: windows) }
+	}
+
+	/// Takes a window out of its layout (dragged off the board, or from a tile's menu),
+	/// leaving it where it is; the others close up when gap filling is on.
+	func untile(_ id: CGWindowID) {
+		guard let display = store.display(of: id) else { return }
+		record(display, label: "Untile")
+		guard store.forget(id) != nil else { return }
+		unfit.remove(id)
+		watcher.keep(only: store.tiledWindowIDs)
+		onLayoutChanged?(display, store.layout(for: display))
+		guard Settings.tilingFillsGaps else { return refreshDividersSoon() }
+		retileSoon([display])
 	}
 
 	/// Re-places every tiled window (the gap or margin changed).
@@ -179,29 +202,31 @@ final class TilingCoordinator {
 
 	// MARK: Restoring
 
-	private func scheduleRestore(after delays: [TimeInterval]) {
+	/// Looks for away windows after each of `delays`. `force` looks even with layout
+	/// restoring turned off (a workspace being applied).
+	func scheduleRestore(after delays: [TimeInterval], force: Bool = false) {
 		restoreWork.forEach { $0.cancel() }
 		restoreWork = delays.map { delay in
 			let work = DispatchWorkItem { [weak self] in
-				MainActor.assumeIsolated { self?.restoreFromSnapshot() }
+				MainActor.assumeIsolated { self?.restoreFromSnapshot(force: force) }
 			}
 			DispatchQueue.main.asyncAfter(deadline: .now() + delay, execute: work)
 			return work
 		}
 	}
 
-	private func restoreFromSnapshot() {
-		guard Settings.tilingRestoresLayouts, store.hasAwayWindows else {
+	private func restoreFromSnapshot(force: Bool) {
+		guard force || Settings.tilingRestoresLayouts, store.hasAwayWindows else {
 			restoreWork.forEach { $0.cancel() }
 			return
 		}
 		loader.load(includeWindowless: false) { [weak self] snapshot in
-			MainActor.assumeIsolated { self?.restore(from: snapshot.windows) }
+			MainActor.assumeIsolated { self?.restore(from: snapshot.windows, force: force) }
 		}
 	}
 
-	private func restore(from windows: [SwitcherWindow]) {
-		guard Settings.tilingRestoresLayouts, store.hasAwayWindows else { return }
+	func restore(from windows: [SwitcherWindow], force: Bool = false) {
+		guard force || Settings.tilingRestoresLayouts, store.hasAwayWindows else { return }
 		let displays = store.bind(windows)
 		guard !displays.isEmpty else { return }
 		for display in displays { onLayoutChanged?(display, store.layout(for: display)) }
@@ -221,13 +246,26 @@ final class TilingCoordinator {
 			guard let screen = NSScreen.screen(uuid: display),
 				let layout = store.layout(for: display)
 			else { continue }
-			place(TilingBoard.offscreen(on: screen, layout: layout), windows: windows)
+			place(
+				TilingBoard.offscreen(on: screen, layout: layout), windows: windows,
+				display: display)
 		}
 	}
 
 	/// Moves each window on `board` to its frame (gliding there when animation is on),
-	/// then remembers where they landed and watches them for closing and moving.
-	func place(_ board: TilingBoard, windows: [SwitcherWindow], animated: Bool = true) {
+	/// then remembers where they landed and watches them for closing and moving. Given its
+	/// `display`, windows known not to fit their slots get room first, and windows that
+	/// turn out not to fit get it afterwards (see +Fitting).
+	func place(
+		_ board: TilingBoard, windows: [SwitcherWindow], animated: Bool = true,
+		display: String? = nil, retry: Bool = true
+	) {
+		var board = board
+		if let display, retry, let layout = fitted(board, windows: windows) {
+			store.save(layout, for: display, windows: windows)
+			board.layout = store.layout(for: display)
+			onLayoutChanged?(display, board.layout)
+		}
 		let placements = Self.placements(for: board, windows: windows)
 		guard !placements.isEmpty else { return refreshDividersSoon() }
 		for placement in placements { watcher.watch(placement.window) }
@@ -238,6 +276,9 @@ final class TilingCoordinator {
 			self.watcher.keep(only: self.store.tiledWindowIDs)
 			self.onPlaced?(Array(placed.keys))
 			self.refreshDividersSoon()
+			if let display {
+				self.checkFit(placed, on: board, display: display, windows: windows, retry: retry)
+			}
 		}
 	}
 

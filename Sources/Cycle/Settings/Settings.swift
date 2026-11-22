@@ -110,4 +110,10 @@ enum Settings {
 		get { min(max(tiling.animationDuration, 0.05), 0.5) }
 		set { store.update { $0.tiling.animationDuration = newValue } }
 	}
+
+	/// Named layouts across every display, to put back later.
+	static var tilingWorkspaces: [Workspace] {
+		get { tiling.workspaces }
+		set { store.update { $0.tiling.workspaces = newValue } }
+	}
 }

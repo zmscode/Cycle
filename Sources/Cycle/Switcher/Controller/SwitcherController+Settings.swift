@@ -11,6 +11,8 @@ extension SwitcherController {
 		// From here the session stays open until Return, a click or Escape, so letting go
 		// of the modifier to use settings doesn't switch windows.
 		sessionMode = .onConfirmation
+		// The board's tiles mustn't take clicks meant for settings.
+		hideBoardTiles()
 		settingsPanel.show(topLeft: settingsAnchor(in: frame))
 	}
 
@@ -18,6 +20,7 @@ extension SwitcherController {
 	func closeSettings() {
 		state.isShowingSettings = false
 		settingsPanel.close()
+		if state.board != nil { showBoardTiles() }
 	}
 
 	/// Just below the gear, right-aligned with it, unless that would cover the switcher:

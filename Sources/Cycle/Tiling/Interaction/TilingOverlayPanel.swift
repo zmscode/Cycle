@@ -10,6 +10,7 @@ final class TilingOverlayPanel {
 	private var panel: NSPanel?
 	/// The screen the overlay covers, in AppKit coordinates.
 	private var screenFrame: CGRect = .zero
+	private var screenVisible: CGRect = .zero
 
 	init(state: SwitcherState) {
 		self.state = state
@@ -21,12 +22,48 @@ final class TilingOverlayPanel {
 		-> BoardPlacement
 	{
 		screenFrame = screen.frame
+		screenVisible = screen.visibleFrame
 		let panel = self.panel ?? makePanel()
 		self.panel = panel
 		panel.setFrame(screen.frame, display: false)
 		panel.orderFrontRegardless()
-		return Self.placement(
-			frame: screen.frame, visible: screen.visibleFrame, switcher: switcher, presets: presets)
+		return placement(picturing: screen, below: switcher, presets: presets)
+	}
+
+	/// Where the board goes on the overlay's screen when it pictures `pictured` (another
+	/// display, mid-drag): the card takes that display's shape.
+	func placement(picturing pictured: NSScreen, below switcher: CGRect, presets: [TilingPreset])
+		-> BoardPlacement
+	{
+		var placement = Self.placement(
+			frame: screenFrame, visible: screenVisible, pictured: pictured.visibleFrame,
+			switcher: switcher, presets: presets)
+		placement.displays = Self.displayChips(in: placement)
+		return placement
+	}
+
+	/// The displays, right-aligned in the board's header, each shaped like its screen.
+	private static func displayChips(in placement: BoardPlacement) -> [DisplayChip] {
+		let screens = NSScreen.screens.sorted { $0.frame.minX < $1.frame.minX }
+		guard screens.count > 1 else { return [] }
+		let height = Theme.Tiling.displayChipHeight
+		let spacing = Theme.Tiling.chipSpacing / 2
+		let y =
+			placement.card.minY + Theme.Tiling.boardPadding
+			+ (Theme.Tiling.boardHeaderHeight - height) / 2 - 2
+		var x = placement.screen.maxX
+		var chips: [DisplayChip] = []
+		for (index, screen) in screens.enumerated().reversed() {
+			guard let display = screen.displayUUID else { continue }
+			let width = height * screen.frame.width / max(screen.frame.height, 1)
+			x -= width
+			chips.insert(
+				DisplayChip(
+					display: display, number: index + 1,
+					rect: CGRect(x: x, y: y, width: width, height: height)), at: 0)
+			x -= spacing
+		}
+		return chips
 	}
 
 	func hide() {
@@ -53,12 +90,18 @@ final class TilingOverlayPanel {
 	}
 
 	/// The board's layout for a screen with `frame` and `visible` area (AppKit coordinates)
-	/// and the switcher at `switcher`.
+	/// and the switcher at `switcher`, picturing a display whose visible area is `pictured`
+	/// (the same screen, unless another display was picked mid-drag).
 	static func placement(
-		frame: CGRect, visible: CGRect, switcher: CGRect, presets: [TilingPreset]
+		frame: CGRect, visible: CGRect, pictured: CGRect? = nil, switcher: CGRect,
+		presets: [TilingPreset]
 	) -> BoardPlacement {
-		let width = min(Theme.Tiling.boardWidth, visible.width * 0.4)
-		let aspect = visible.height / max(visible.width, 1)
+		let pictured = pictured ?? visible
+		let aspect = pictured.height / max(pictured.width, 1)
+		// Tall displays get a narrower card, so it fits under the switcher.
+		let width = min(
+			Theme.Tiling.boardWidth, visible.width * 0.4,
+			Theme.Tiling.boardWidth * 0.75 / max(aspect, 0.01))
 		let height = width * aspect
 		let padding = Theme.Tiling.boardPadding
 		let header = Theme.Tiling.boardHeaderHeight

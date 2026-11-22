@@ -7,3 +7,9 @@ enum BoardTileRole {
 	/// Where a dragged window will land, numbered when several are dragged.
 	case incoming(number: Int?)
 }
+
+extension BoardTileRole {
+	var isResting: Bool {
+		if case .resting = self { true } else { false }
+	}
+}

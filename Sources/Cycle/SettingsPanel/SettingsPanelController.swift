@@ -19,6 +19,9 @@ final class SettingsPanelController {
 	var isVisible: Bool { panel?.isVisible == true }
 	/// The screen's tiled layout as preset slots, for the editor's "This Screen".
 	var currentLayout: () -> RiftLayout<Int>? = { nil }
+	/// The current layouts as a workspace; applying one (returns displays skipped).
+	var captureWorkspace: (String) -> Workspace? = { _ in nil }
+	var applyWorkspace: (Workspace) -> Int = { _ in 0 }
 
 	/// The panel's frame on screen while it's open.
 	var frame: CGRect? { isVisible ? panel?.frame : nil }
@@ -120,6 +123,8 @@ final class SettingsPanelController {
 			onSetup: { [weak self] in self?.showSetup() },
 			onOpenConfig: { ConfigStore.shared.openInEditor() },
 			currentLayout: { [weak self] in self?.currentLayout() },
+			captureWorkspace: { [weak self] name in self?.captureWorkspace(name) },
+			applyWorkspace: { [weak self] workspace in self?.applyWorkspace(workspace) ?? 0 },
 			onResize: { [weak self] in self?.fitToContent() },
 			onQuit: { NSApp.terminate(nil) })
 		let host = NSHostingView(rootView: view)

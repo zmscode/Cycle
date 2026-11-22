@@ -6,6 +6,22 @@ if CommandLine.arguments.contains("--dump") {
 	exit(0)
 }
 
+// `Cycle --workspace <name>` applies a saved workspace. With Cycle already running the
+// name goes to it; otherwise this copy starts up and applies it once it's going.
+if let index = CommandLine.arguments.firstIndex(of: "--workspace"),
+	CommandLine.arguments.indices.contains(index + 1)
+{
+	let others = NSRunningApplication.runningApplications(
+		withBundleIdentifier: Bundle.main.bundleIdentifier ?? "com.zms.Cycle"
+	).filter { $0.processIdentifier != ProcessInfo.processInfo.processIdentifier }
+	if !others.isEmpty {
+		DistributedNotificationCenter.default().postNotificationName(
+			SwitcherController.workspaceRequest, object: CommandLine.arguments[index + 1],
+			userInfo: nil, deliverImmediately: true)
+		exit(0)
+	}
+}
+
 #if DEBUG
 	// `Cycle --render-board <folder>` renders the tiling board for scripted drags, then exits.
 	if let index = CommandLine.arguments.firstIndex(of: "--render-board"),

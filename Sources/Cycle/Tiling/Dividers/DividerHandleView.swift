@@ -83,6 +83,10 @@ final class DividerHandleView: NSView {
 	}
 
 	override func draw(_ dirtyRect: NSRect) {
+		// The faintest fill, so the whole grip takes clicks: a borderless window lets them
+		// through wherever it's fully transparent.
+		NSColor.black.withAlphaComponent(0.01).setFill()
+		bounds.fill()
 		let active = isHovered || isDragging
 		let accent = NSColor(Theme.Colors.mark)
 		let horizontal = axis == .horizontal

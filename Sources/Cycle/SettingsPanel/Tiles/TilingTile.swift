@@ -19,12 +19,15 @@ struct TilingTile: View {
 			Group {
 				if draft != nil {
 					PresetEditor(
-						draft: Binding { draft ?? PresetDraft(startingWith: .pane(0), name: "") } set: {
+						draft: Binding {
+							draft ?? PresetDraft(startingWith: .pane(0), name: "")
+						} set: {
 							draft = $0
 						},
 						currentLayout: currentLayout(), onSave: save, onCancel: closeEditor,
 						onDelete: delete,
-						onEditingText: { settings.isEditingText = $0 })
+						onEditingText: { settings.isEditingText = $0 }
+					)
 					.transition(.opacity.combined(with: .scale(scale: 0.97)))
 				} else {
 					options
@@ -36,48 +39,57 @@ struct TilingTile: View {
 	}
 
 	private var options: some View {
-			VStack(alignment: .leading, spacing: 10) {
-				Text("Tiling").font(.callout.bold())
-				LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 8) {
-					ForEach(TilingPreset.all(customs: settings.tilingCustomPresets)) { preset in
-						PresetToggle(
-							preset: preset, mainShare: settings.tilingMainShare,
-							shortcut: shortcut(for: preset), onToggle: toggle,
-							onEdit: preset.isCustom ? { edit(preset) } : nil)
-					}
-					NewPresetTile(action: newPreset)
+		VStack(alignment: .leading, spacing: 10) {
+			Text("Tiling").font(.callout.bold())
+			LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 8) {
+				ForEach(TilingPreset.all(customs: settings.tilingCustomPresets)) { preset in
+					PresetToggle(
+						preset: preset, mainShare: settings.tilingMainShare,
+						shortcut: shortcut(for: preset), onToggle: toggle,
+						onEdit: { edit(preset) })
 				}
-				TilingSlider(
-					title: "Gaps", value: $settings.tilingGap, range: 0...30,
-					step: 1, format: points)
-				TilingSlider(
-					title: "Margins", value: $settings.tilingMargin, range: 0...40,
-					step: 1, format: points)
-				TilingSlider(
-					title: "Main Window", value: $settings.tilingMainShare, range: 0.5...0.75,
-					step: 0.05, format: percent)
-				TilingSlider(
-					title: "Animation", value: $settings.tilingAnimationDuration,
-					range: 0.05...0.5, step: 0.05, format: seconds
-				)
-				.disabled(!settings.tilingAnimates || reduceMotion)
-				.opacity(settings.tilingAnimates && !reduceMotion ? 1 : 0.45)
-				if reduceMotion {
-					Label("Windows jump into place while Reduce Motion is on", systemImage: "figure.walk.motion")
-						.font(.caption2)
-						.foregroundStyle(.secondary)
-				}
+				NewPresetTile(action: newPreset)
 			}
+			TilingSlider(
+				title: "Gaps", value: $settings.tilingGap, range: 0...30,
+				step: 1, format: points)
+			TilingSlider(
+				title: "Margins", value: $settings.tilingMargin, range: 0...40,
+				step: 1, format: points)
+			TilingSlider(
+				title: "Main Window", value: $settings.tilingMainShare, range: 0.5...0.75,
+				step: 0.05, format: percent)
+			TilingSlider(
+				title: "Animation", value: $settings.tilingAnimationDuration,
+				range: 0.05...0.5, step: 0.05, format: seconds
+			)
+			.disabled(!settings.tilingAnimates || reduceMotion)
+			.opacity(settings.tilingAnimates && !reduceMotion ? 1 : 0.45)
+			if reduceMotion {
+				Label(
+					"Windows jump into place while Reduce Motion is on",
+					systemImage: "figure.walk.motion"
+				)
+				.font(.caption2)
+				.foregroundStyle(.secondary)
+			}
+		}
 	}
 
 	// MARK: Editing presets
 
 	private func newPreset() {
 		let number = settings.tilingCustomPresets.count + 1
-		openEditor(PresetDraft(startingWith: BuiltinPreset.halves.layout(mainShare: 0.5), name: "Custom \(number)"))
+		openEditor(
+			PresetDraft(
+				startingWith: BuiltinPreset.halves.layout(mainShare: 0.5), name: "Custom \(number)")
+		)
 	}
 
 	private func edit(_ preset: TilingPreset) {
+		if case .builtin(let builtin) = preset.shape {
+			return openEditor(PresetDraft(adjusting: builtin, mainShare: settings.tilingMainShare))
+		}
 		guard let custom = settings.tilingCustomPresets.first(where: { $0.id == preset.id }) else {
 			return
 		}
@@ -104,7 +116,12 @@ struct TilingTile: View {
 		}
 		settings.tilingCustomPresets = customs
 		var shown = settings.tilingPresets.map(\.id)
-		if draft.isNew { shown.append(preset.id) }
+		if let original = draft.replacing, let index = shown.firstIndex(of: original) {
+			// An adjusted built-in takes the original's place, and its ⌘ number.
+			shown[index] = preset.id
+		} else if draft.isNew {
+			shown.append(preset.id)
+		}
 		settings.tilingPresets = shown.compactMap { TilingPreset.named($0, customs: customs) }
 		closeEditor()
 	}

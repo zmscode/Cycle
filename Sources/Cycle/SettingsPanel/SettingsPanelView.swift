@@ -12,6 +12,9 @@ struct SettingsPanelView: View {
 	let onOpenConfig: () -> Void
 	/// The screen's tiled layout, for the preset editor to start from.
 	let currentLayout: () -> RiftLayout<Int>?
+	/// The current layouts as a workspace, and applying one.
+	let captureWorkspace: (String) -> Workspace?
+	let applyWorkspace: (Workspace) -> Int
 	/// The content changed height; the panel fits itself to it.
 	let onResize: () -> Void
 	let onQuit: () -> Void
@@ -69,6 +72,8 @@ struct SettingsPanelView: View {
 							systemImage: "wind", isOn: $settings.tilingAnimates)
 					}
 				}
+				WorkspacesTile(
+					settings: settings, capture: captureWorkspace, apply: applyWorkspace)
 				PermissionsTile(
 					permissions: permissions,
 					tapIsRunning: permissions.accessibility ? tapIsRunning() : true,

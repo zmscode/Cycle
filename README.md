@@ -117,6 +117,37 @@ follow the pointer directly). **Animate** in settings turns it off, and the Anim
 sets how long it takes (0.05–0.5 s). It's off while macOS's Reduce Motion is on. An app that
 answers too slowly to animate smoothly snaps into place instead.
 
+**Rearranging on the board.** The board's tiles can be picked up during a session. Drop
+one on another tile's middle to swap them, on an edge to move it beside that tile, or along
+the screen's edge. Drag it off the board to take it out of the layout (it stays where it
+is). Right-click a tile for **Remove from Layout** and **Close Window**; right-clicks on the
+board don't undo.
+
+**Rotating marked windows.** With several marked windows over a preset chip, the chip
+numbers the slots each will take. Scroll to rotate them through the slots (and, with more
+windows than slots, through which ones are left out); releasing applies what's shown.
+
+**Other displays.** With more than one display, the board's header shows a chip for each.
+Mid-drag, rest the pointer on one for a moment and the board switches to that display:
+dropping there moves the windows to it, and the display they came from closes up.
+
+**Windows that won't fit.** Some apps won't shrink below a minimum size. After tiling,
+Cycle checks where each window actually landed. If one came out up to 15% bigger than its
+slot, the neighbouring divider moves to make room and the windows are placed once more. A
+bigger overrun is left where the app put it and outlined in amber on the board. Cycle
+remembers each app's minimum while it runs, so later layouts make room straight away.
+
+**Adjusting built-in presets.** Hover a built-in preset in the grid and click the sliders
+to open a copy in the preset editor. Saving makes it a custom preset that takes the
+original's place on the board, ⌘ number included.
+
+**Workspaces.** The Workspaces tile in settings saves how every display is tiled now under
+a name, and puts it back with **Apply**: apps that aren't running are opened, and their
+windows are tiled as they appear (matched as remembered layouts are). A display that isn't
+connected is skipped. Each display it lays out is one undo step. `Cycle --workspace <name>`
+applies one from the command line, handing it to the copy of Cycle that's running.
+Workspaces are kept in `cycle.config` under `tiling.workspaces`.
+
 The Tiling tile in settings picks which presets the board shows, the main window's share
 in Main + Stack and Centre, and the gaps between windows and around the screen's edges
 (down to none). Presets are numbered ⌘1, ⌘2… in the order the grid shows them (or the
@@ -133,27 +164,28 @@ UserDefaults.
 
 ```json
 {
-  "switcher": {
-    "activationMode": "onKeyRelease",
-    "currentSpaceOnly": false,
-    "includeHiddenWindows": true,
-    "layout": "grouped",
-    "modifier": "command",
-    "panelDelay": 0.12,
-    "showWindowlessApps": false
-  },
-  "tiling": {
-    "fillGaps": true,
-    "gap": 10,
-    "mainShare": 0.6,
-    "margin": 10,
-    "presets": ["halves", "thirds", "quarters", "mainStack", "full"],
-    "restoreLayouts": true,
-    "showDividers": true,
-    "animate": true,
-    "animationDuration": 0.2,
-    "customPresets": []
-  }
+	"switcher": {
+		"activationMode": "onKeyRelease",
+		"currentSpaceOnly": false,
+		"includeHiddenWindows": true,
+		"layout": "grouped",
+		"modifier": "command",
+		"panelDelay": 0.12,
+		"showWindowlessApps": false
+	},
+	"tiling": {
+		"fillGaps": true,
+		"gap": 10,
+		"mainShare": 0.6,
+		"margin": 10,
+		"presets": ["halves", "thirds", "quarters", "mainStack", "full"],
+		"restoreLayouts": true,
+		"showDividers": true,
+		"animate": true,
+		"animationDuration": 0.2,
+		"customPresets": [],
+		"workspaces": []
+	}
 }
 ```
 
@@ -177,6 +209,17 @@ filters; the window controls on each card do close, minimize, full screen and qu
 just run
 ```
 
+Without [`just`](https://github.com/casey/just), the `Makefile` has the same tasks for the
+`make` that ships with macOS:
+
+```bash
+make run
+```
+
+`make help` lists them. Options are variables: `make build CONFIG=debug` builds a debug copy,
+and `make icon NAME=cycle-panes` picks the icon. `make release` does the same as
+`just release`.
+
 Cycle needs **Accessibility** (for the keyboard tap and window control) and **Screen Recording**
 (for thumbnails and titles). On launch, if either is missing, Cycle opens a setup window and
 takes you through them in order. It opens System Settings at the Accessibility list (Device
@@ -194,24 +237,24 @@ certificate instead.
 
 Everything is in `Sources/Cycle`, one type per file:
 
-| Folder                                      | What's in it                                                                                      |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| `App`                                       | Entry point and app delegate                                                                      |
-| `Settings` | `cycle.config` (reading, writing, watching, migrating) and the observable copy the settings panel edits |
-| `Input`                                     | The keyboard event tap and key codes                                                              |
-| `System`                                    | Private SkyLight / AX calls, permissions, AppKit and AX helpers                                   |
-| `Windows`                                   | Listing windows, thumbnails, recency order, focusing and window actions                           |
-| `Switcher/Controller`                       | The session controller, split by concern (keyboard, navigation, search, mouse, actions, settings) |
-| `Switcher/Model`, `Panel`, `Views`, `Cards` | Session state, the panel and its layout, and the SwiftUI views                                    |
-| `Tiling/Model`                              | Presets, the board (targets and drops) and drag state, built on RiftCore                          |
-| `Tiling/Engine` | The layout store, remembered layouts, window watching, the animated window mover, and the coordinator (with undo, divider drags and screen grips) |
-| `Tiling/Dividers` | The divider grip windows, shared by the screen and the board |
-| `Tiling/Debug` | `--render-board` (debug builds): renders the board and editor offscreen |
-| `Tiling/Interaction` | Mouse tracking, the controller's tiling and board extensions, divider resizing and the overlay panel |
-| `Tiling/Views`                              | The board, presets, ghosts and mark badges                                                        |
-| `SettingsPanel` | The settings panel, its tiles and controls, and the preset editor |
-| `Setup`                                     | First-run permissions window and drag-to-grant                                                    |
-| `Style`                                     | Theme constants and shared view styles                                                            |
+| Folder                                      | What's in it                                                                                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `App`                                       | Entry point and app delegate                                                                                                                      |
+| `Settings`                                  | `cycle.config` (reading, writing, watching, migrating) and the observable copy the settings panel edits                                           |
+| `Input`                                     | The keyboard event tap and key codes                                                                                                              |
+| `System`                                    | Private SkyLight / AX calls, permissions, AppKit and AX helpers                                                                                   |
+| `Windows`                                   | Listing windows, thumbnails, recency order, focusing and window actions                                                                           |
+| `Switcher/Controller`                       | The session controller, split by concern (keyboard, navigation, search, mouse, actions, settings)                                                 |
+| `Switcher/Model`, `Panel`, `Views`, `Cards` | Session state, the panel and its layout, and the SwiftUI views                                                                                    |
+| `Tiling/Model`                              | Presets, the board (targets and drops) and drag state, built on RiftCore                                                                          |
+| `Tiling/Engine`                             | The layout store, remembered layouts, window watching, the animated window mover, and the coordinator (with undo, divider drags and screen grips) |
+| `Tiling/Dividers`                           | The divider grip windows, shared by the screen and the board                                                                                      |
+| `Tiling/Debug`                              | `--render-board` (debug builds): renders the board and editor offscreen                                                                           |
+| `Tiling/Interaction`                        | Mouse tracking, the controller's tiling and board extensions, divider resizing and the overlay panel                                              |
+| `Tiling/Views`                              | The board, presets, ghosts and mark badges                                                                                                        |
+| `SettingsPanel`                             | The settings panel, its tiles and controls, and the preset editor                                                                                 |
+| `Setup`                                     | First-run permissions window and drag-to-grant                                                                                                    |
+| `Style`                                     | Theme constants and shared view styles                                                                                                            |
 
 ## Releasing
 
@@ -222,9 +265,9 @@ checksum. `Casks/cycle.rb` here is the template it fills in.
 
 ## Icons
 
-SVG sources are in `Support/Icons` (`cycle-minimal` is the app icon; `cycle-panes`,
-`cycle-carousel` and `cycle-orbit` are alternatives).
-`just icon <name>` rebuilds `Support/AppIcon.icns` from one of them.
+The icon's SVG sources are no longer in the repository; `Support/AppIcon.icns` is the app
+icon. To change it, put an SVG in `Support/Icons` and run `just icon <name>`, which rebuilds
+`Support/AppIcon.icns` from it.
 
 `open build/Cycle.app --args --setup` shows the setup window even when everything is granted.
 `Cycle --dump` prints the window list a session would show.
