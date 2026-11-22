@@ -9,6 +9,6 @@ let package = Package(
 			name: "Cycle",
 			path: "Sources/Cycle",
 			swiftSettings: [.swiftLanguageMode(.v5)]
-		),
+		)
 	]
 )

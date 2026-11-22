@@ -104,24 +104,3 @@ release: package
     git add Casks/cycle.rb
     git commit -m "Cycle {{ version }}" -m "Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"; and git push; or exit 1
     echo "Released Cycle {{ version }}: brew install --cask zmscode/cycle/cycle"
-
-# Keyboard and mouse work; Esc, Return or a click closes it. Layout names work too.
-# Try a layout over made-up windows: 1 = deck, 2 = shelf, 3 = columns
-demo which="1": build
-    #!/usr/bin/env fish
-    set -l pick (string trim --left --chars=- -- "{{ which }}")
-    switch $pick
-        case 1 deck
-            set style deck
-        case 2 shelf
-            set style shelf
-        case 3 columns
-            set style columns
-        case grouped grid list
-            set style $pick
-        case '*'
-            echo "Pick 1 (deck), 2 (shelf), 3 (columns), or grouped, grid, list."; exit 1
-    end
-    echo "Cycle demo: $style. Arrows, Tab, scroll and typing move around; Esc closes."
-    # Launched as the app, so it uses Cycle's own Accessibility permission for the keyboard.
-    open -n -W "{{ app }}" --args --demo $style --interactive

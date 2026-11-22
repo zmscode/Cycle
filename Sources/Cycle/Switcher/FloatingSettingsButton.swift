@@ -16,7 +16,9 @@ struct FloatingSettingsButton: View {
 			.font(.title3)
 			.foregroundStyle(isOpen ? .white : .primary)
 			.frame(width: Theme.Gear.diameter, height: Theme.Gear.diameter)
-			.background(isOpen ? AnyShapeStyle(Theme.Colors.selection) : AnyShapeStyle(.clear), in: .circle)
+			.background(
+				isOpen ? AnyShapeStyle(Theme.Colors.selection) : AnyShapeStyle(.clear), in: .circle
+			)
 			.contentShape(.circle)
 			.buttonStyle(.plain)
 			.glassSheet(cornerRadius: Theme.Gear.diameter / 2)

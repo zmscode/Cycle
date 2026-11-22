@@ -20,10 +20,7 @@ struct SwitcherWindow: Identifiable {
 	let isWindowless: Bool
 
 	var app: NSRunningApplication? { NSRunningApplication(processIdentifier: pid) }
-	/// Set only by the `--demo` mock windows, which have no running app behind them.
-	var iconOverride: NSImage? = nil
-
-	var icon: NSImage? { iconOverride ?? app?.icon }
+	var icon: NSImage? { app?.icon }
 
 	var displayTitle: String {
 		if isWindowless { return appName }

@@ -8,7 +8,7 @@ struct LayoutTile: View {
 		ControlTile {
 			VStack(alignment: .leading, spacing: 8) {
 				Text("Layout").font(.callout.bold())
-				// Three across, so all six layouts fit in two rows.
+				// Three across, one per layout.
 				LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 3), spacing: 10) {
 					ForEach(SwitcherStyle.allCases, id: \.self) { style in
 						LayoutChoice(style: style, isSelected: selection == style, onSelect: select)

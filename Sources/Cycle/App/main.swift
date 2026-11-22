@@ -6,29 +6,6 @@ if CommandLine.arguments.contains("--dump") {
 	exit(0)
 }
 
-// `Cycle --demo` shows the switcher over made-up windows (for screenshots) until quit.
-if CommandLine.arguments.contains("--demo") {
-	MainActor.assumeIsolated {
-		let app = NSApplication.shared
-		app.setActivationPolicy(.accessory)
-		let controller = SwitcherController()
-		DispatchQueue.main.async { Demo.run(controller: controller) }
-		withExtendedLifetime(controller) { app.run() }
-	}
-}
-
-// `Cycle --preview` shows the panel for a few seconds without the keyboard tap.
-if CommandLine.arguments.contains("--preview") {
-	MainActor.assumeIsolated {
-		let app = NSApplication.shared
-		app.setActivationPolicy(.accessory)
-		let controller = SwitcherController()
-		DispatchQueue.main.async { controller.preview(seconds: 4) }
-		DispatchQueue.main.asyncAfter(deadline: .now() + 4.5) { exit(0) }
-		withExtendedLifetime(controller) { app.run() }
-	}
-}
-
 MainActor.assumeIsolated {
 	let app = NSApplication.shared
 	let delegate = AppDelegate()

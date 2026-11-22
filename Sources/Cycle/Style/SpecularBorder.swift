@@ -12,7 +12,8 @@ struct SpecularBorder: View {
 				LinearGradient(
 					colors: [.white.opacity(0.34 * intensity), .white.opacity(0.06 * intensity)],
 					startPoint: .top, endPoint: .bottom),
-				lineWidth: 1)
+				lineWidth: 1
+			)
 			.allowsHitTesting(false)
 	}
 }

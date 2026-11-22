@@ -9,7 +9,10 @@ struct LayoutChoice: View {
 	var body: some View {
 		VStack(spacing: 4) {
 			Button(style.title, systemImage: style.systemImage, action: choose)
-				.buttonStyle(RoundIconButtonStyle(isOn: isSelected, diameter: ControlTileMetrics.layoutCircle))
+				.buttonStyle(
+					RoundIconButtonStyle(
+						isOn: isSelected, diameter: ControlTileMetrics.layoutCircle)
+				)
 				.symbolEffect(.bounce, value: isSelected)
 			Text(style.shortTitle)
 				.font(.caption)

@@ -24,8 +24,9 @@ struct WindowCard: View {
 		VStack(spacing: Theme.Card.labelGap) {
 			WindowCardHeader(
 				window: window, isActive: isSelected || isHovering, isSelected: isSelected,
-				onAction: perform)
-				.frame(width: slot.width, height: Theme.Card.labelHeight)
+				onAction: perform
+			)
+			.frame(width: slot.width, height: Theme.Card.labelHeight)
 			WindowThumbnail(window: window, image: image, size: thumbSize, isSelected: isSelected)
 				.frame(width: slot.width, height: slot.height)
 		}

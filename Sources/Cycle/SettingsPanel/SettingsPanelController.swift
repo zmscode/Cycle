@@ -35,13 +35,16 @@ final class SettingsPanelController {
 	func showStandalone() {
 		let panel = preparedPanel()
 		let visible = SwitcherPanel.screenUnderPointer().visibleFrame
-		panel.setFrameOrigin(CGPoint(
-			x: visible.midX - panel.frame.width / 2,
-			y: visible.midY - panel.frame.height / 2))
+		panel.setFrameOrigin(
+			CGPoint(
+				x: visible.midX - panel.frame.width / 2,
+				y: visible.midY - panel.frame.height / 2))
 		NSApp.activate()
 		fadeIn(panel)
 		panel.makeKey()
-		clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [.leftMouseDown, .rightMouseDown]) {
+		clickMonitor = NSEvent.addGlobalMonitorForEvents(matching: [
+			.leftMouseDown, .rightMouseDown,
+		]) {
 			[weak self] _ in
 			MainActor.assumeIsolated { self?.close() }
 		}
@@ -58,7 +61,10 @@ final class SettingsPanelController {
 		clickMonitor = nil
 		keyMonitor = nil
 		guard let panel, panel.isVisible else { return }
-		NSAnimationContext.runAnimationGroup({ $0.duration = 0.1; panel.animator().alphaValue = 0 }) {
+		NSAnimationContext.runAnimationGroup({
+			$0.duration = 0.1
+			panel.animator().alphaValue = 0
+		}) {
 			panel.orderOut(nil)
 		}
 	}
@@ -74,7 +80,10 @@ final class SettingsPanelController {
 	private func fadeIn(_ panel: NSPanel) {
 		panel.alphaValue = 0
 		panel.orderFrontRegardless()
-		NSAnimationContext.runAnimationGroup { $0.duration = 0.12; panel.animator().alphaValue = 1 }
+		NSAnimationContext.runAnimationGroup {
+			$0.duration = 0.12
+			panel.animator().alphaValue = 1
+		}
 	}
 
 	private func makePanel() -> NSPanel {

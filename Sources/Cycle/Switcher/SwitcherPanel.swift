@@ -50,7 +50,7 @@ final class SwitcherPanel {
 		return SwitcherLayout.metrics(
 			for: state.windows, style: Settings.layout,
 			maxSize: CGSize(width: visible.width * 0.9, height: visible.height * 0.8),
-			showsSearchBar: !state.searchQuery.isEmpty, fannedAppID: state.fannedAppID)
+			showsSearchBar: !state.searchQuery.isEmpty)
 	}
 
 	/// The top row's height in the current layout.
@@ -97,7 +97,9 @@ final class SwitcherPanel {
 			backing: .buffered, defer: false)
 		// Just under the switcher and its gear.
 		dim.level = NSWindow.Level(rawValue: NSWindow.Level.popUpMenu.rawValue - 1)
-		dim.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+		dim.collectionBehavior = [
+			.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle,
+		]
 		dim.isOpaque = false
 		dim.hasShadow = false
 		dim.ignoresMouseEvents = true
@@ -134,7 +136,9 @@ final class SwitcherPanel {
 		let visible = Self.screenUnderPointer().visibleFrame
 		let margin = Theme.Gear.margin
 		gear.setFrame(
-			CGRect(x: visible.maxX - margin - size, y: visible.maxY - margin - size, width: size, height: size),
+			CGRect(
+				x: visible.maxX - margin - size, y: visible.maxY - margin - size, width: size,
+				height: size),
 			display: true)
 	}
 
@@ -143,14 +147,17 @@ final class SwitcherPanel {
 			contentRect: .zero, styleMask: [.borderless, .nonactivatingPanel],
 			backing: .buffered, defer: false)
 		gear.level = .popUpMenu
-		gear.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle]
+		gear.collectionBehavior = [
+			.canJoinAllSpaces, .fullScreenAuxiliary, .transient, .ignoresCycle,
+		]
 		gear.isOpaque = false
 		gear.backgroundColor = .clear
 		gear.hasShadow = false
 		gear.becomesKeyOnlyIfNeeded = true
 		gear.animationBehavior = .none
 		gear.contentView = NSHostingView(
-			rootView: FloatingSettingsButton(state: state, onToggle: { [weak controller] in controller?.toggleSettings() }))
+			rootView: FloatingSettingsButton(
+				state: state, onToggle: { [weak controller] in controller?.toggleSettings() }))
 		return gear
 	}
 

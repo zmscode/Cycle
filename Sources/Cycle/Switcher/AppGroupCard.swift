@@ -8,9 +8,6 @@ struct AppGroupCard: View {
 	let metrics: SwitcherLayout
 	let selection: Namespace.ID
 	let controller: SwitcherController
-	/// Overrides the card's size (the deck draws a fanned stack at least a card wide and
-	/// as tall as its neighbours).
-	var size: CGSize?
 
 	private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: Theme.Group.radius) }
 
@@ -25,7 +22,8 @@ struct AppGroupCard: View {
 	var body: some View {
 		VStack(alignment: .leading, spacing: Theme.Group.headerGap) {
 			if let first = windows.first {
-				AppGroupHeader(window: first, windowCount: windows.filter { !$0.isWindowless }.count)
+				AppGroupHeader(
+					window: first, windowCount: windows.filter { !$0.isWindowless }.count)
 			}
 			HStack(spacing: Theme.Group.tileSpacing) {
 				ForEach(windows) { window in
@@ -35,22 +33,27 @@ struct AppGroupCard: View {
 						image: state.images[window.id],
 						isSelected: window.id == state.selectedID,
 						thumb: metrics.thumb(at: index),
-						slot: CGSize(width: metrics.slotWidth(at: index), height: metrics.slotHeight(at: index)),
+						slot: CGSize(
+							width: metrics.slotWidth(at: index),
+							height: metrics.slotHeight(at: index)),
 						selection: selection,
-						controller: controller)
+						controller: controller
+					)
 					.id(window.id)
 				}
 			}
 		}
 		.padding(Theme.Group.padding)
 		.frame(
-			width: size?.width ?? metrics.groupWidth(group),
-			height: size?.height ?? metrics.groupHeight(group),
-			alignment: .topLeading)
+			width: metrics.groupWidth(group),
+			height: metrics.groupHeight(group),
+			alignment: .topLeading
+		)
 		.insetSurface(cornerRadius: Theme.Group.radius, isHighlighted: containsSelection)
 		.overlay {
 			// The app being switched to gets a faint blue ring.
-			shape.strokeBorder(Theme.Colors.selection.opacity(containsSelection ? 0.55 : 0), lineWidth: 1.5)
+			shape.strokeBorder(
+				Theme.Colors.selection.opacity(containsSelection ? 0.55 : 0), lineWidth: 1.5)
 		}
 		.accessibilityElement(children: .contain)
 	}

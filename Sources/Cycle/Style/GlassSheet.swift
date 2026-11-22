@@ -11,7 +11,8 @@ struct GlassSheet: ViewModifier {
 			// A light dark tint keeps text legible over bright wallpapers.
 			.glassEffect(
 				.regular.tint(.black.opacity(0.22)).interactive(false),
-				in: RoundedRectangle(cornerRadius: cornerRadius))
+				in: RoundedRectangle(cornerRadius: cornerRadius)
+			)
 			.overlay {
 				SpecularBorder(cornerRadius: cornerRadius)
 			}

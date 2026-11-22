@@ -15,7 +15,8 @@ struct RoundIcon<Glyph: View>: View {
 			.frame(width: diameter, height: diameter)
 			.background(
 				isOn ? AnyShapeStyle(Theme.Colors.selection) : AnyShapeStyle(.white.opacity(0.1)),
-				in: .circle)
+				in: .circle
+			)
 			.overlay {
 				Circle().strokeBorder(.white.opacity(isOn ? 0.3 : 0.12), lineWidth: 0.5)
 			}

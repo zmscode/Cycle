@@ -49,7 +49,8 @@ final class ThumbnailCache: @unchecked Sendable {
 				if coverage < 0.5, self?.cached(id) != nil { return }
 				let image = Self.flattened(raw)
 				let captured = Captured(
-					image: NSImage(cgImage: image, size: NSSize(width: image.width, height: image.height)),
+					image: NSImage(
+						cgImage: image, size: NSSize(width: image.width, height: image.height)),
 					tint: Self.averageColor(image),
 					capturedAt: Date())
 				self?.lock.withLock { self?.cache[id] = captured }
@@ -62,20 +63,27 @@ final class ThumbnailCache: @unchecked Sendable {
 	static func inspect(_ id: CGWindowID) -> String {
 		guard let raw = captureOne(id, best: false) else { return "no capture" }
 		let flat = flattened(raw)
-		let backdrop = backdropColor(raw).flatMap { color in
-			color.components.map { $0.prefix(3).map { String(format: "%.2f", $0) }.joined(separator: " ") }
-		} ?? "none"
+		let backdrop =
+			backdropColor(raw).flatMap { color in
+				color.components.map {
+					$0.prefix(3).map { String(format: "%.2f", $0) }.joined(separator: " ")
+				}
+			} ?? "none"
 		return String(
 			format: "%dx%d coverage %.2f flattened %@ fill [%@] mean %.2f",
-			raw.width, raw.height, coverage(raw), flat === raw ? "no" : "yes", backdrop, meanBrightness(flat))
+			raw.width, raw.height, coverage(raw), flat === raw ? "no" : "yes", backdrop,
+			meanBrightness(flat))
 	}
 
 	private static func meanBrightness(_ image: CGImage) -> Double {
 		let side = 32
 		var pixels = [UInt8](repeating: 0, count: side * side * 4)
-		guard let context = CGContext(
-			data: &pixels, width: side, height: side, bitsPerComponent: 8, bytesPerRow: side * 4,
-			space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+		guard
+			let context = CGContext(
+				data: &pixels, width: side, height: side, bitsPerComponent: 8,
+				bytesPerRow: side * 4,
+				space: CGColorSpaceCreateDeviceRGB(),
+				bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
 		else { return 0 }
 		context.draw(image, in: CGRect(x: 0, y: 0, width: side, height: side))
 		var sum = 0.0
@@ -190,7 +198,9 @@ final class ThumbnailCache: @unchecked Sendable {
 		}
 		guard Double(transparent) / Double(side * side) >= 0.01 else { return nil }
 		let source = tinted.count > 0 ? tinted : solid
-		guard source.count > 0 else { return CGColor(srgbRed: 0.12, green: 0.12, blue: 0.13, alpha: 1) }
+		guard source.count > 0 else {
+			return CGColor(srgbRed: 0.12, green: 0.12, blue: 0.13, alpha: 1)
+		}
 		return CGColor(
 			srgbRed: source.r / source.count, green: source.g / source.count,
 			blue: source.b / source.count, alpha: 1)

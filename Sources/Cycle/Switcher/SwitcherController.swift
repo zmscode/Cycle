@@ -14,7 +14,9 @@ final class SwitcherController {
 	private lazy var panel = SwitcherPanel(state: state, controller: self)
 	/// Cycle's settings: under the gear during a session, or on its own when reopened.
 	private(set) lazy var settingsPanel: SettingsPanelController = {
-		let settings = SettingsPanelController(tapIsRunning: { [weak self] in self?.tapIsRunning ?? false })
+		let settings = SettingsPanelController(tapIsRunning: { [weak self] in
+			self?.tapIsRunning ?? false
+		})
 		settings.settings.onChange = { [weak self] in self?.settingsChanged() }
 		return settings
 	}()
@@ -62,20 +64,8 @@ final class SwitcherController {
 
 	private func trace(_ message: @autoclosure () -> String) {
 		guard ProcessInfo.processInfo.environment["CYCLE_TRACE"] != nil else { return }
-		FileHandle.standardError.write("[\(Date().timeIntervalSince1970)] \(message())\n".data(using: .utf8)!)
-	}
-
-	/// Called whenever a session ends; the interactive demo quits on it.
-	var onSessionEnd: (() -> Void)?
-
-	/// `--demo --interactive`: the keyboard drives the demo session. It stays open without
-	/// holding a modifier, and Esc, Return or a click ends it.
-	func startDemoKeyboard() {
-		sessionMode = .onConfirmation
-		tap.handler = { [weak self] type, event in
-			MainActor.assumeIsolated { self?.handle(type, event) ?? false }
-		}
-		if AXIsProcessTrusted() { tap.start() }
+		FileHandle.standardError.write(
+			"[\(Date().timeIntervalSince1970)] \(message())\n".data(using: .utf8)!)
 	}
 
 	func start() {
@@ -148,8 +138,6 @@ final class SwitcherController {
 					closeSettings()
 				} else if !state.searchQuery.isEmpty {
 					setQuery("")
-				} else if state.fannedAppID != nil {
-					setFanned(nil)
 				} else {
 					cancel()
 				}
@@ -226,8 +214,6 @@ final class SwitcherController {
 		presentWhenLoaded = false
 		mouseSelectionInitialLocation = nil
 		state.searchQuery = ""
-		state.fannedAppID = nil
-		state.lastInApp = [:]
 		startWatchdog()
 
 		loader.load(includeWindowless: Settings.showWindowlessApps) { [weak self] snapshot in
@@ -249,7 +235,9 @@ final class SwitcherController {
 
 	private func loaded(_ snapshot: WindowEnumerator.Snapshot, generation thisGeneration: Int) {
 		guard generation == thisGeneration, phase == .loading else { return }
-		trace("loaded \(snapshot.windows.count) windows commitWhenLoaded=\(commitWhenLoaded) presentWhenLoaded=\(presentWhenLoaded)")
+		trace(
+			"loaded \(snapshot.windows.count) windows commitWhenLoaded=\(commitWhenLoaded) presentWhenLoaded=\(presentWhenLoaded)"
+		)
 		var windows = mru.sort(snapshot.windows, zOrder: snapshot.zOrder)
 		if Settings.currentSpaceOnly { windows.removeAll { $0.isOnOtherSpace } }
 		if !Settings.includeHiddenWindows { windows.removeAll { $0.isMinimized || $0.isAppHidden } }
@@ -273,7 +261,7 @@ final class SwitcherController {
 		state.selectedID = windows[((start + pendingSteps) % count + count) % count].id
 		// Grouped layout: keep each app's windows together, starting from the same
 		// most-recent window.
-		if Settings.layout.groupsByApp {
+		if Settings.layout == .grouped {
 			state.allWindows = WindowGroup.groupedOrder(windows)
 			state.windows = state.allWindows
 		}
@@ -282,35 +270,6 @@ final class SwitcherController {
 
 		if commitWhenLoaded { return commitNow() }
 		if presentWhenLoaded { present() }
-	}
-
-	/// `Cycle --preview`: opens a session without the keyboard, for checking the panel.
-	func preview(seconds: TimeInterval) {
-		begin(backward: false)
-		presentationWork?.cancel()
-		presentWhenLoaded = true
-		DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in self?.cancel() }
-	}
-
-	/// `Cycle --demo`: a session over made-up windows, for screenshots.
-	func showDemo(
-		_ windows: [SwitcherWindow], images: [CGWindowID: NSImage], tints: [CGWindowID: NSColor]
-	) {
-		generation += 1
-		phase = .active
-		state.recentOrder = windows
-		state.allWindows = windows
-		state.windows = windows
-		state.images = images
-		state.tints = tints
-		state.searchQuery = ""
-		state.selectedID = windows[min(1, windows.count - 1)].id
-		if Settings.layout.groupsByApp {
-			state.allWindows = WindowGroup.groupedOrder(windows)
-			state.windows = state.allWindows
-		}
-		mouseSelectionInitialLocation = NSEvent.mouseLocation
-		panel.show()
 	}
 
 	private func present() {
@@ -344,7 +303,6 @@ final class SwitcherController {
 			return
 		}
 		guard phase == .active else { return }
-		if Settings.layout.stepsByApp { return stepApp(delta) }
 		let windows = state.windows
 		guard !windows.isEmpty else { return }
 		let index = windows.firstIndex { $0.id == state.selectedID } ?? 0
@@ -362,12 +320,6 @@ final class SwitcherController {
 		guard phase == .active,
 			let current = state.windows.firstIndex(where: { $0.id == state.selectedID })
 		else { return }
-		switch Settings.layout {
-		case .deck: return deckMove(direction)
-		case .shelf: return shelfMove(direction)
-		case .columns: return columnsMove(direction)
-		case .grid, .grouped, .list: break
-		}
 		let rows = panel.navigationRows()
 		guard let rowIndex = rows.firstIndex(where: { $0.contains { $0.index == current } }),
 			let column = rows[rowIndex].firstIndex(where: { $0.index == current })
@@ -418,104 +370,6 @@ final class SwitcherController {
 			scrollRemainder = 0
 			step(lines > 0 ? -1 : 1)
 		}
-	}
-
-	// MARK: Moving by app (deck, shelf, columns)
-
-	private var appGroups: [WindowGroup] { WindowGroup.groups(for: state.windows) }
-
-	private func currentAppIndex(in groups: [WindowGroup]) -> Int? {
-		guard let current = state.windows.firstIndex(where: { $0.id == state.selectedID }) else { return nil }
-		return groups.firstIndex { $0.indices.contains(current) }
-	}
-
-	/// Selects `group`'s window: the one last selected there, else its first.
-	private func selectApp(_ group: WindowGroup) {
-		let ids = group.indices.map { state.windows[$0].id }
-		if let remembered = state.lastInApp[group.id], ids.contains(remembered) {
-			state.selectedID = remembered
-		} else {
-			state.selectedID = ids.first
-		}
-	}
-
-	/// The next or previous app, wrapping. Closes a fanned deck on the way.
-	private func stepApp(_ delta: Int) {
-		let groups = appGroups
-		guard !groups.isEmpty else { return }
-		let index = currentAppIndex(in: groups) ?? 0
-		setFanned(nil)
-		selectApp(groups[(index + delta + groups.count) % groups.count])
-	}
-
-	/// The next or previous window of the current app, wrapping or stopping at the ends.
-	private func stepInApp(_ delta: Int, wrap: Bool) {
-		let groups = appGroups
-		guard let appIndex = currentAppIndex(in: groups),
-			let current = state.windows.firstIndex(where: { $0.id == state.selectedID }),
-			let position = groups[appIndex].indices.firstIndex(of: current)
-		else { return }
-		let indices = groups[appIndex].indices
-		var next = position + delta
-		if wrap {
-			next = (next + indices.count) % indices.count
-		} else {
-			next = min(max(next, 0), indices.count - 1)
-		}
-		state.selectedID = state.windows[indices[next]].id
-	}
-
-	/// Deck: ← → change app; ↓ fans the current app's stack out, then ← → move within it
-	/// and ↑ closes it again.
-	private func deckMove(_ direction: ArrowDirection) {
-		let groups = appGroups
-		guard let appIndex = currentAppIndex(in: groups) else { return }
-		let app = groups[appIndex]
-		let isFanned = state.fannedAppID == app.id
-		switch direction {
-		case .left, .right:
-			let delta = direction == .left ? -1 : 1
-			if isFanned { stepInApp(delta, wrap: true) } else { stepApp(delta) }
-		case .down:
-			if !isFanned, app.indices.count > 1 { setFanned(app.id) }
-		case .up:
-			if isFanned { setFanned(nil) }
-		}
-	}
-
-	/// Shelf: ← → change app; ↑ ↓ move along the current app's windows on the shelf.
-	private func shelfMove(_ direction: ArrowDirection) {
-		switch direction {
-		case .left: stepApp(-1)
-		case .right: stepApp(1)
-		case .up: stepInApp(-1, wrap: true)
-		case .down: stepInApp(1, wrap: true)
-		}
-	}
-
-	/// Columns: ↑ ↓ move within a column; ← → go to the next column, landing on the window
-	/// at the same height (or its last one).
-	private func columnsMove(_ direction: ArrowDirection) {
-		switch direction {
-		case .up: stepInApp(-1, wrap: false)
-		case .down: stepInApp(1, wrap: false)
-		case .left, .right:
-			let groups = appGroups
-			guard groups.count > 1, let appIndex = currentAppIndex(in: groups),
-				let current = state.windows.firstIndex(where: { $0.id == state.selectedID }),
-				let position = groups[appIndex].indices.firstIndex(of: current)
-			else { return }
-			let delta = direction == .left ? -1 : 1
-			let target = groups[(appIndex + delta + groups.count) % groups.count]
-			state.selectedID = state.windows[target.indices[min(position, target.indices.count - 1)]].id
-		}
-	}
-
-	/// Fans an app's stack out (deck), or closes it with nil; the panel resizes to fit.
-	private func setFanned(_ appID: String?) {
-		guard state.fannedAppID != appID else { return }
-		state.fannedAppID = appID
-		if phase == .active { panel.relayout() }
 	}
 
 	/// Next window of the highlighted app (DockDoor's in-switcher app-window stepping).
@@ -570,7 +424,6 @@ final class SwitcherController {
 		thumbnails.cancelPending()
 		if state.isShowingSettings { closeSettings() }
 		panel.hide()
-		onSessionEnd?()
 	}
 
 	private func startWatchdog() {
@@ -627,7 +480,8 @@ final class SwitcherController {
 		let visible = SwitcherPanel.screenUnderPointer().visibleFrame
 		if let gear = panel.gearFrame {
 			let topLeft = CGPoint(x: gear.maxX - size.width, y: gear.minY - gap)
-			let rect = CGRect(x: topLeft.x, y: topLeft.y - size.height, width: size.width, height: size.height)
+			let rect = CGRect(
+				x: topLeft.x, y: topLeft.y - size.height, width: size.width, height: size.height)
 			if !rect.intersects(frame.insetBy(dx: -gap, dy: -gap)), rect.minY >= visible.minY {
 				return topLeft
 			}
@@ -647,7 +501,7 @@ final class SwitcherController {
 	private func settingsChanged() {
 		guard phase == .active else { return }
 		let recent = state.recentOrder
-		state.allWindows = Settings.layout.groupsByApp ? WindowGroup.groupedOrder(recent) : recent
+		state.allWindows = Settings.layout == .grouped ? WindowGroup.groupedOrder(recent) : recent
 		let selected = state.selectedID
 		setQuery(state.searchQuery)
 		state.selectedID = selected

@@ -16,29 +16,22 @@ silicon.
 
 ## Use
 
-| Key                   | Does                                                          |
-| --------------------- | ------------------------------------------------------------- |
-| ⌘Tab (hold ⌘)         | open; Tab / Shift-Tab step through windows; release ⌘ to switch |
-| ← →                   | move along the current row                                    |
-| ↑ ↓                   | move to the row above or below                                |
-| scroll                | next / previous window                                        |
-| type                  | filter by app or window name (release ⌘ to switch to the match) |
-| ⌘`                    | next window of the highlighted app                            |
-| Esc                   | close settings, then clear the filter, then cancel            |
-| Return                | switch to the highlighted window                              |
+| Key           | Does                                                            |
+| ------------- | --------------------------------------------------------------- |
+| ⌘Tab (hold ⌘) | open; Tab / Shift-Tab step through windows; release ⌘ to switch |
+| ← →           | move along the current row                                      |
+| ↑ ↓           | move to the row above or below                                  |
+| scroll        | next / previous window                                          |
+| type          | filter by app or window name (release ⌘ to switch to the match) |
+| ⌘`            | next window of the highlighted app                              |
+| Esc           | close settings, then clear the filter, then cancel              |
+| Return        | switch to the highlighted window                                |
 
 Windows are grouped by app by default. The other layouts, picked in settings:
 
 - **Grid**: every window in rows. **List**: rows with large icons and a big preview.
-- **Stacked Deck**: one card per app with its windows stacked. ← → and Tab move between apps;
-  ↓ fans an app's stack out, ↑ closes it.
-- **App Strip and Shelf**: a row of app icons, the highlighted app's windows on a shelf
-  below. ← → and Tab change app; ↑ ↓ move along the shelf.
-- **Columns per App**: a column per app with its windows stacked. ↑ ↓ move within a
-  column, ← → between columns.
 
-Try any layout over made-up windows with `just demo 1` (deck), `2` (shelf), `3` (columns) or
-a name (`grouped`, `grid`, `list`); the keyboard and mouse work, and Esc closes it. Each window's controls (close, minimize, full screen, then quit) appear on it
+Each window's controls (close, minimize, full screen, then quit) appear on it
 when it's highlighted or under the pointer. A quick ⌘Tab tap switches to the previous window
 without showing the panel, and pressing ⌘Tab rapidly never leaves the switcher stuck open.
 
@@ -83,8 +76,7 @@ SVG sources are in `Support/Icons` (`cycle-minimal` is the app icon; `cycle-pane
 `just icon <name>` rebuilds `Support/AppIcon.icns` from one of them.
 
 `open build/Cycle.app --args --setup` shows the setup window even when everything is granted.
-`Cycle --dump` prints the window list a session would show; `Cycle --demo [grouped|grid|list]` opens it over made-up windows (add `--with-settings` to open settings too); `Cycle --preview` shows the panel for
-four seconds without the keyboard.
+`Cycle --dump` prints the window list a session would show.
 
 It uses private SkyLight and HIServices calls (`CGSHWCaptureWindowList`, `_AXUIElementGetWindow`,
 `_SLPSSetFrontProcessWithOptions`, `SLPSPostEventRecordTo`), so it can't be sandboxed or ship on the

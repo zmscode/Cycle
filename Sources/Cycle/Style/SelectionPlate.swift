@@ -10,7 +10,8 @@ struct SelectionPlate: View {
 			.fill(
 				LinearGradient(
 					colors: [.white.opacity(0.18), .white.opacity(0.08)],
-					startPoint: .top, endPoint: .bottom))
+					startPoint: .top, endPoint: .bottom)
+			)
 			.overlay {
 				SpecularBorder(cornerRadius: cornerRadius, intensity: 0.8)
 			}

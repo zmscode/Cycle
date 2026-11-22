@@ -8,7 +8,8 @@ final class FocusQueue: @unchecked Sendable {
 	private let lock = NSLock()
 	private var latest = 0
 
-	func focus(_ window: SwitcherWindow, then followUp: (@Sendable (SwitcherWindow) -> Void)? = nil) {
+	func focus(_ window: SwitcherWindow, then followUp: (@Sendable (SwitcherWindow) -> Void)? = nil)
+	{
 		let token = lock.withLock {
 			latest += 1
 			return latest

@@ -10,8 +10,8 @@ struct SwitcherView: View {
 		VStack(spacing: 0) {
 			if metrics.showsSearchBar {
 				QueryBar(query: state.searchQuery, matchCount: state.windows.count)
-				.padding(.horizontal, Theme.Panel.padding + 4)
-				.frame(height: metrics.headerHeight)
+					.padding(.horizontal, Theme.Panel.padding + 4)
+					.frame(height: metrics.headerHeight)
 				Divider()
 					.padding(.horizontal, Theme.Panel.padding)
 			}
@@ -22,12 +22,6 @@ struct SwitcherView: View {
 				WindowList(state: state, controller: controller, metrics: metrics)
 			case .grouped:
 				WindowGroupsView(state: state, controller: controller, metrics: metrics)
-			case .deck:
-				DeckView(state: state, controller: controller, metrics: metrics)
-			case .shelf:
-				ShelfView(state: state, controller: controller, metrics: metrics)
-			case .columns:
-				ColumnsView(state: state, controller: controller, metrics: metrics)
 			}
 		}
 		.frame(width: metrics.fullSize.width, height: metrics.fullSize.height, alignment: .top)

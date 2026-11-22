@@ -19,9 +19,11 @@ struct WindowPreviewPane: View {
 				// the pane and the title below doesn't jump as the selection changes.
 				WindowThumbnail(
 					window: window, image: image,
-					size: SwitcherLayout.fit(aspect: SwitcherLayout.aspect(of: window), in: previewBox),
-					isSelected: false)
-					.frame(width: previewBox.width, height: previewBox.height)
+					size: SwitcherLayout.fit(
+						aspect: SwitcherLayout.aspect(of: window), in: previewBox),
+					isSelected: false
+				)
+				.frame(width: previewBox.width, height: previewBox.height)
 				VStack(alignment: .leading, spacing: 4) {
 					Text(window.displayTitle)
 						.font(.title3.bold())

@@ -21,9 +21,12 @@ struct PermissionsTile: View {
 				PermissionStatusRow(title: "Accessibility", granted: permissions.accessibility)
 				PermissionStatusRow(title: "Screen Recording", granted: permissions.screenRecording)
 				if permissions.accessibility && !tapIsRunning {
-					Label("Keyboard shortcut isn't running. Relaunch Cycle.", systemImage: "exclamationmark.triangle.fill")
-						.font(.caption)
-						.foregroundStyle(.orange)
+					Label(
+						"Keyboard shortcut isn't running. Relaunch Cycle.",
+						systemImage: "exclamationmark.triangle.fill"
+					)
+					.font(.caption)
+					.foregroundStyle(.orange)
 				}
 			}
 		}

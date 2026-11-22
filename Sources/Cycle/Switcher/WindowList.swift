@@ -20,7 +20,8 @@ struct WindowList: View {
 								window: window,
 								isSelected: window.id == state.selectedID,
 								selection: selection,
-								controller: controller)
+								controller: controller
+							)
 							.id(window.id)
 						}
 					}

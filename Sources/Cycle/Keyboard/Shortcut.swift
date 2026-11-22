@@ -81,16 +81,11 @@ enum Settings {
 		set { defaults.set(newValue, forKey: "windowSwitcherCurrentSpaceOnly") }
 	}
 
-	/// The switcher layout. `layoutOverride` (set by `--demo`) wins for this run only.
+	/// The switcher layout.
 	static var layout: SwitcherStyle {
-		get {
-			layoutOverride
-				?? SwitcherStyle(rawValue: defaults.string(forKey: "windowSwitcherLayout") ?? "") ?? .grouped
-		}
+		get { SwitcherStyle(rawValue: defaults.string(forKey: "windowSwitcherLayout") ?? "") ?? .grouped }
 		set { defaults.set(newValue.rawValue, forKey: "windowSwitcherLayout") }
 	}
-
-	nonisolated(unsafe) static var layoutOverride: SwitcherStyle?
 
 	static var showWindowlessApps: Bool {
 		get { flag("windowSwitcherShowWindowlessApps", default: false) }
