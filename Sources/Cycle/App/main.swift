@@ -6,6 +6,18 @@ if CommandLine.arguments.contains("--dump") {
 	exit(0)
 }
 
+#if DEBUG
+	// `Cycle --render-board <folder>` renders the tiling board for scripted drags, then exits.
+	if let index = CommandLine.arguments.firstIndex(of: "--render-board"),
+		CommandLine.arguments.indices.contains(index + 1)
+	{
+		MainActor.assumeIsolated {
+			BoardRenderHarness.run(into: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+		}
+		exit(0)
+	}
+#endif
+
 MainActor.assumeIsolated {
 	let app = NSApplication.shared
 	let delegate = AppDelegate()

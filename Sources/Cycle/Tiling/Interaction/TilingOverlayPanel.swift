@@ -25,7 +25,8 @@ final class TilingOverlayPanel {
 		self.panel = panel
 		panel.setFrame(screen.frame, display: false)
 		panel.orderFrontRegardless()
-		return placement(screen: screen, switcher: switcher, presets: presets)
+		return Self.placement(
+			frame: screen.frame, visible: screen.visibleFrame, switcher: switcher, presets: presets)
 	}
 
 	func hide() {
@@ -37,11 +38,11 @@ final class TilingOverlayPanel {
 		CGPoint(x: point.x - screenFrame.minX, y: screenFrame.maxY - point.y)
 	}
 
-	private func placement(screen: NSScreen, switcher: CGRect, presets: [TilingPreset])
-		-> BoardPlacement
-	{
-		let frame = screen.frame
-		let visible = screen.visibleFrame
+	/// The board's layout for a screen with `frame` and `visible` area (AppKit coordinates)
+	/// and the switcher at `switcher`.
+	static func placement(
+		frame: CGRect, visible: CGRect, switcher: CGRect, presets: [TilingPreset]
+	) -> BoardPlacement {
 		let width = min(Theme.Tiling.boardWidth, visible.width * 0.4)
 		let aspect = visible.height / max(visible.width, 1)
 		let height = width * aspect

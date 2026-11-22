@@ -47,8 +47,9 @@ extension SwitcherController {
 
 	/// A setting changed in the panel: redraw an open switcher in the new arrangement.
 	func settingsChanged() {
-		guard phase == .active else { return }
+		tiling.settingsChanged()
 		retileIfSpacingChanged()
+		guard phase == .active else { return }
 		let recent = state.recentOrder
 		state.allWindows = Settings.layout == .grouped ? WindowGroup.groupedOrder(recent) : recent
 		let selected = state.selectedID

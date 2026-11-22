@@ -19,6 +19,8 @@ final class SwitcherState {
 	var searchQuery = ""
 	/// A window being dragged onto the tiling board.
 	var drag: WindowDrag?
+	/// A brief note after tiling from the keyboard ("Thirds · Helium left untiled").
+	var tilingNotice: String?
 	/// Windows right-clicked for tiling together, in the order they were marked.
 	var markedIDs: [CGWindowID] = []
 

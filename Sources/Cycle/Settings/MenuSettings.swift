@@ -1,7 +1,7 @@
 import Observation
 
 /// The settings the settings panel edits, observable so tiles update as they change.
-/// Each property writes through to `Settings` (UserDefaults) and reports the change, so an
+/// Each property writes through to `Settings` (`cycle.config`) and reports the change, so an
 /// open switcher can redraw at once.
 @Observable
 @MainActor
@@ -76,5 +76,38 @@ final class MenuSettings {
 			Settings.tilingPresets = tilingPresets
 			onChange?()
 		}
+	}
+
+	var tilingFillsGaps = Settings.tilingFillsGaps {
+		didSet {
+			Settings.tilingFillsGaps = tilingFillsGaps
+			onChange?()
+		}
+	}
+
+	var tilingRestoresLayouts = Settings.tilingRestoresLayouts {
+		didSet {
+			Settings.tilingRestoresLayouts = tilingRestoresLayouts
+			onChange?()
+		}
+	}
+
+	/// Picks up settings changed outside the panel (`cycle.config` edited by hand).
+	func reload() {
+		func sync<T: Equatable>(_ path: ReferenceWritableKeyPath<MenuSettings, T>, _ value: T) {
+			if self[keyPath: path] != value { self[keyPath: path] = value }
+		}
+		sync(\.layout, Settings.layout)
+		sync(\.modifier, Settings.modifier)
+		sync(\.keepOpenUntilReturn, Settings.activationMode == .onConfirmation)
+		sync(\.currentSpaceOnly, Settings.currentSpaceOnly)
+		sync(\.includeHiddenWindows, Settings.includeHiddenWindows)
+		sync(\.showWindowlessApps, Settings.showWindowlessApps)
+		sync(\.tilingGap, Settings.tilingGap)
+		sync(\.tilingMargin, Settings.tilingMargin)
+		sync(\.tilingMainShare, Settings.tilingMainShare)
+		sync(\.tilingPresets, Settings.tilingPresets)
+		sync(\.tilingFillsGaps, Settings.tilingFillsGaps)
+		sync(\.tilingRestoresLayouts, Settings.tilingRestoresLayouts)
 	}
 }

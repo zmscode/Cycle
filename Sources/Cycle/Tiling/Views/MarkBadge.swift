@@ -10,7 +10,7 @@ struct MarkBadge: View {
 			.font(.caption.bold().monospacedDigit())
 			.foregroundStyle(.white)
 			.frame(minWidth: 22, minHeight: 22)
-			.background(Theme.Colors.selection, in: Circle())
+			.background(Theme.Colors.mark, in: Circle())
 			.overlay { Circle().strokeBorder(.white.opacity(0.7), lineWidth: 1.5) }
 			.shadow(color: .black.opacity(0.3), radius: 3, y: 1)
 			.accessibilityLabel("Marked for tiling, \(number)")

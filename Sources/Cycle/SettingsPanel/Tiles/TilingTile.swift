@@ -13,7 +13,7 @@ struct TilingTile: View {
 					ForEach(TilingPreset.allCases) { preset in
 						PresetToggle(
 							preset: preset, mainShare: settings.tilingMainShare,
-							isOn: settings.tilingPresets.contains(preset), onToggle: toggle)
+							shortcut: shortcut(for: preset), onToggle: toggle)
 					}
 				}
 				TilingSlider(
@@ -30,9 +30,26 @@ struct TilingTile: View {
 	}
 
 	private func toggle(_ preset: TilingPreset) {
-		var enabled = Set(settings.tilingPresets)
-		if enabled.contains(preset) { enabled.remove(preset) } else { enabled.insert(preset) }
-		settings.tilingPresets = TilingPreset.allCases.filter(enabled.contains)
+		var presets = settings.tilingPresets
+		if let index = presets.firstIndex(of: preset) {
+			presets.remove(at: index)
+		} else {
+			presets.append(preset)
+		}
+		// The ⌘ numbers follow the grid's order, unless the order's been set by hand in
+		// cycle.config: then a newly shown preset just goes on the end.
+		let canonical = TilingPreset.allCases.filter(settings.tilingPresets.contains)
+		if settings.tilingPresets == canonical {
+			let shown = Set(presets)
+			presets = TilingPreset.allCases.filter(shown.contains)
+		}
+		settings.tilingPresets = presets
+	}
+
+	/// "⌘1" for the first preset shown, and so on (only the first nine have one).
+	private func shortcut(for preset: TilingPreset) -> String? {
+		guard let index = settings.tilingPresets.firstIndex(of: preset) else { return nil }
+		return index < 9 ? "\(settings.modifier.symbol)\(index + 1)" : ""
 	}
 
 	private func points(_ value: Double) -> String {

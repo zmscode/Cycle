@@ -1,4 +1,4 @@
-import CoreGraphics
+import AppKit
 import RiftCore
 
 /// One screen's tiling layout and its scaled-down picture under the switcher. The layout is
@@ -33,13 +33,24 @@ struct TilingBoard {
 		mainShare = Settings.tilingMainShare
 	}
 
+	/// A board for `screen` that isn't drawn: for working out frames.
+	static func offscreen(on screen: NSScreen, layout: RiftLayout<CGWindowID>?) -> TilingBoard {
+		TilingBoard(
+			layout: layout, visible: screen.visibleFrameTopLeft,
+			placement: BoardPlacement(card: .zero, screen: .zero, chips: []),
+			displayScale: screen.backingScaleFactor)
+	}
+
 	/// The small copy of the screen, in the overlay's coordinates; it pictures `visible`.
 	var rect: CGRect { placement.screen }
 
 	private var scale: CGFloat { visible.width > 0 ? rect.width / visible.width : 1 }
 
 	/// Every slot's frame on screen, empty preset slots included.
-	var allFrames: [CGWindowID: CGRect] {
+	var allFrames: [CGWindowID: CGRect] { frames(of: layout) }
+
+	/// Every slot's frame on screen in `layout`.
+	func frames(of layout: RiftLayout<CGWindowID>?) -> [CGWindowID: CGRect] {
 		layout?.geometry(in: tileArea, metrics: metrics).paneFrames ?? [:]
 	}
 

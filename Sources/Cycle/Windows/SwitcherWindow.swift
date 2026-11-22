@@ -18,6 +18,8 @@ struct SwitcherWindow: Identifiable {
 	/// Running apps with no windows get a placeholder entry (DockDoor's
 	/// `windowSwitcherShowWindowlessApps`); its id is synthetic.
 	let isWindowless: Bool
+	/// A dialog or panel (an Open panel, an alert) rather than a document window.
+	var isDialog = false
 
 	var app: NSRunningApplication? { NSRunningApplication(processIdentifier: pid) }
 	var icon: NSImage? { app?.icon }

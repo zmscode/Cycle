@@ -18,7 +18,7 @@ struct PresetThumbnail: View {
 				context.fill(
 					path,
 					with: .color(
-						lit ? Theme.Colors.selection : .white.opacity(isEnabled ? 0.28 : 0.1)))
+						lit ? Theme.Colors.mark : .white.opacity(isEnabled ? 0.28 : 0.1)))
 				if lit {
 					context.stroke(path, with: .color(.white.opacity(0.6)), lineWidth: 1)
 				}

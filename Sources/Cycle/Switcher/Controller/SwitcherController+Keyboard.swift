@@ -72,9 +72,16 @@ extension SwitcherController {
 				if !state.searchQuery.isEmpty { setQuery(String(state.searchQuery.dropLast())) }
 			case Key.tab: step(shift ? -1 : 1)
 			case Key.grave: stepWithinApp(shift ? -1 : 1)
+			case Key.space where state.searchQuery.isEmpty:
+				// Space marks the highlighted window for tiling (once typing has started it's
+				// part of the query).
+				if let id = state.selectedID { toggleMark(id) }
+			case let key where modifierHeld && Key.digits.contains(key):
+				// The modifier and 1–9: the board's presets, in order.
+				tileWithPreset(at: Key.digits.firstIndex(of: key) ?? 0)
 			default:
 				// Typing filters: letters, digits and the like go into the query. There are
-				// no letter shortcuts, so nothing else claims them. A leading space is ignored.
+				// no letter shortcuts, so nothing else claims them.
 				if let text = Self.typedText(event),
 					!(state.searchQuery.isEmpty && text.allSatisfy(\.isWhitespace))
 				{

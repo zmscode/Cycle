@@ -1,12 +1,15 @@
 import SwiftUI
 
-/// A preset in settings: its picture and name; click to show or hide it on the board.
+/// A preset in settings: its picture, name and keyboard shortcut; click to show or hide it
+/// on the board.
 struct PresetToggle: View {
 	let preset: TilingPreset
 	let mainShare: Double
-	let isOn: Bool
+	/// "⌘1"… while it's shown (empty past the ninth), nil while hidden.
+	let shortcut: String?
 	let onToggle: (TilingPreset) -> Void
 
+	private var isOn: Bool { shortcut != nil }
 	private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: 8) }
 
 	var body: some View {
@@ -22,6 +25,16 @@ struct PresetToggle: View {
 					.overlay {
 						shape.strokeBorder(isOn ? Theme.Colors.selection : .white.opacity(0.12))
 					}
+					.overlay(alignment: .topTrailing) {
+						if let shortcut, !shortcut.isEmpty {
+							Text(shortcut)
+								.font(.system(size: 8, weight: .semibold).monospacedDigit())
+								.padding(.horizontal, 3)
+								.padding(.vertical, 1)
+								.background(.black.opacity(0.6), in: .capsule)
+								.padding(2)
+						}
+					}
 				Text(preset.title)
 					.font(.caption2)
 					.foregroundStyle(isOn ? .primary : .secondary)
@@ -32,7 +45,7 @@ struct PresetToggle: View {
 		.buttonStyle(.plain)
 		.sensoryFeedback(.selection, trigger: isOn)
 		.accessibilityLabel(preset.title)
-		.accessibilityValue(isOn ? "Shown" : "Hidden")
+		.accessibilityValue(isOn ? "Shown" + (shortcut.map { $0.isEmpty ? "" : ", \($0)" } ?? "") : "Hidden")
 		.accessibilityAddTraits(isOn ? .isSelected : [])
 	}
 

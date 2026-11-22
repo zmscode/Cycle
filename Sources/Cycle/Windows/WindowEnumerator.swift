@@ -82,7 +82,8 @@ enum WindowEnumerator {
 						isAppHidden: app.isHidden,
 						isOnOtherSpace: !ax.isMinimized && !app.isHidden
 							&& !visibleSpaceWindowIDs.contains(ax.id),
-						isWindowless: false
+						isWindowless: false,
+						isDialog: ax.isDialog
 					))
 			}
 		}

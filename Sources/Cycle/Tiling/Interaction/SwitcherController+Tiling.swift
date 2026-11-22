@@ -19,17 +19,18 @@ extension SwitcherController {
 			self?.panelOwns(window) ?? false
 		}
 		dragTracker.onPress = { [weak self] in self?.ignoresNextClick = false }
-		dragTracker.onRightClick = { [weak self] in self?.toggleMark() }
+		dragTracker.onRightClick = { [weak self] in
+			guard let self, let id = self.pointerWindowID else { return }
+			self.toggleMark(id)
+		}
 		dragTracker.onBegin = { [weak self] id in self?.beginDrag(id) }
 		dragTracker.onMove = { [weak self] point in self?.moveDrag(to: point) }
 		dragTracker.onEnd = { [weak self] in self?.endDrag() }
 	}
 
 	private func beginDrag(_ id: CGWindowID) {
-		guard isActive, let frame = panelFrame, let screen = panelScreen,
-			let display = screen.displayID
-		else { return }
-		let layout = tilingStore.layout(for: display, windows: state.recentOrder)
+		guard isActive, let frame = panelFrame, let screen = panelScreen else { return }
+		let layout = tiling.layout(for: screen, windows: state.recentOrder)
 		let placement = tilingOverlay.show(
 			on: screen, below: frame, presets: Settings.tilingPresets)
 		let board = TilingBoard(
@@ -39,7 +40,7 @@ extension SwitcherController {
 		// A marked window brings the other marked windows with it.
 		let ids = state.markedIDs.contains(id) ? draggableMarks(startingWith: id) : [id]
 		state.drag = WindowDrag(
-			windowID: id, windowIDs: ids, display: display, board: board,
+			windowID: id, windowIDs: ids, screen: screen, board: board,
 			pointer: tilingOverlay.local(NSEvent.mouseLocation), target: nil)
 	}
 
@@ -59,12 +60,12 @@ extension SwitcherController {
 			let layout = drag.board.dropping(drag.windowIDs, on: target)
 		else { return releaseIfModifierUp() }
 		if drag.windowIDs.count > 1 { state.markedIDs = [] }
-		tile(layout, on: drag.board, display: drag.display, focusing: drag.windowID)
+		tile(layout, on: drag.board, screen: drag.screen, focusing: drag.windowID)
 	}
 
-	/// Right-click: marks the window under the pointer for tiling together, or unmarks it.
-	private func toggleMark() {
-		guard isActive, state.drag == nil, let id = pointerWindowID,
+	/// Right-click or Space: marks a window for tiling together, or unmarks it.
+	func toggleMark(_ id: CGWindowID) {
+		guard isActive, state.drag == nil,
 			let window = state.windows.first(where: { $0.id == id }), WindowTiler.canTile(window)
 		else { return }
 		if let index = state.markedIDs.firstIndex(of: id) {
@@ -73,6 +74,66 @@ extension SwitcherController {
 			state.markedIDs.append(id)
 		}
 		NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+	}
+
+	/// The modifier and a number: lays out the screen the switcher is on with the board's
+	/// `index`th preset. The windows dragged, else the marked ones, else the highlighted one
+	/// go in its slots, main slot first.
+	func tileWithPreset(at index: Int) {
+		let presets = Settings.tilingPresets
+		guard isActive, presets.indices.contains(index), let screen = panelScreen else { return }
+		let preset = presets[index]
+		let ids: [CGWindowID]
+		if let drag = state.drag {
+			ids = drag.windowIDs
+			dragTracker.reset()
+			cancelDrag()
+		} else if let first = state.markedIDs.first(where: canTile) {
+			ids = draggableMarks(startingWith: first).filter(canTile)
+		} else if let id = state.selectedID, canTile(id) {
+			ids = [id]
+		} else {
+			return
+		}
+		let board = TilingBoard.offscreen(
+			on: screen, layout: tiling.layout(for: screen, windows: state.recentOrder))
+		guard let slot = preset.slotOrder(mainShare: board.mainShare).first,
+			let layout = board.filling(preset, with: ids)
+				?? board.dropping(ids, on: .preset(preset, slot: slot))
+		else { return }
+		state.markedIDs = []
+		showNotice(preset.title + leftOutNote(before: board.layout, after: layout))
+		tile(layout, on: board, screen: screen, focusing: ids[0])
+	}
+
+	/// " · Helium left untiled" for tiled windows `after` doesn't keep, else nothing.
+	private func leftOutNote(
+		before: RiftLayout<CGWindowID>?, after: RiftLayout<CGWindowID>
+	) -> String {
+		let kept = Set(after.paneIDs)
+		let names = (before?.paneIDs ?? []).filter {
+			!TilingSlot.isPlaceholder($0) && !kept.contains($0)
+		}.compactMap { id in state.recentOrder.first { $0.id == id }?.appName }
+		switch names.count {
+		case 0: return ""
+		case 1: return " · \(names[0]) left untiled"
+		default: return " · \(names.count) windows left untiled"
+		}
+	}
+
+	/// Shows `text` at the foot of the switcher for a moment.
+	private func showNotice(_ text: String) {
+		trace("notice \(text)")
+		state.tilingNotice = text
+		let shown = text
+		DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
+			guard let self, self.state.tilingNotice == shown else { return }
+			self.state.tilingNotice = nil
+		}
+	}
+
+	private func canTile(_ id: CGWindowID) -> Bool {
+		state.windows.first { $0.id == id }.map(WindowTiler.canTile) ?? false
 	}
 
 	/// The marked windows still in the session: `id` first, then the rest in marking order.
@@ -90,61 +151,26 @@ extension SwitcherController {
 
 	/// Saves and applies `layout`, moving every window in it to its frame.
 	private func tile(
-		_ layout: RiftLayout<CGWindowID>, on board: TilingBoard, display: CGDirectDisplayID,
+		_ layout: RiftLayout<CGWindowID>, on board: TilingBoard, screen: NSScreen,
 		focusing id: CGWindowID
 	) {
-		var board = board
-		board.layout = layout
-		tilingStore.save(layout, for: display)
-		let byID = Dictionary(
-			state.recentOrder.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-		let placements = board.frames.compactMap { id, frame in
-			byID[id].map { (window: $0, frame: frame) }
-		}
 		state.selectedID = id
-		tiler.place(placements) { [weak self] placed in
-			guard let self else { return }
-			for (id, frame) in placed { self.tilingStore.recordPlacement(id, frame: frame) }
-			self.windowsMoved(Array(placed.keys))
-		}
+		tiling.apply(layout, on: board, screen: screen, windows: state.recentOrder)
 		releaseIfModifierUp()
 	}
 
-	/// Re-places every tiled window when the gap or margin has changed.
+	/// Re-places every tiled window when the gap or margin has changed (after a short
+	/// pause, while a slider is still moving).
 	func retileIfSpacingChanged() {
 		let spacing = (gap: Settings.tilingGap, margin: Settings.tilingMargin)
 		guard spacing != tilingSpacing else { return }
 		tilingSpacing = spacing
 		retileWork?.cancel()
 		let work = DispatchWorkItem { [weak self] in
-			MainActor.assumeIsolated { self?.retileAll() }
+			MainActor.assumeIsolated { self?.tiling.retileAll() }
 		}
 		retileWork = work
 		DispatchQueue.main.asyncAfter(deadline: .now() + 0.15, execute: work)
-	}
-
-	private func retileAll() {
-		let byID = Dictionary(
-			state.recentOrder.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
-		var placements: [(window: SwitcherWindow, frame: CGRect)] = []
-		for screen in NSScreen.screens {
-			guard let display = screen.displayID,
-				let layout = tilingStore.layout(for: display, windows: state.recentOrder)
-			else { continue }
-			let board = TilingBoard(
-				layout: layout, visible: screen.visibleFrameTopLeft,
-				placement: BoardPlacement(card: .zero, screen: .zero, chips: []),
-				displayScale: screen.backingScaleFactor)
-			placements += board.frames.compactMap { id, frame in
-				byID[id].map { (window: $0, frame: frame) }
-			}
-		}
-		guard !placements.isEmpty else { return }
-		tiler.place(placements) { [weak self] placed in
-			guard let self else { return }
-			for (id, frame) in placed { self.tilingStore.recordPlacement(id, frame: frame) }
-			self.windowsMoved(Array(placed.keys))
-		}
 	}
 
 	/// Letting go of the modifier mid-drag doesn't end the session; once the drop is done it

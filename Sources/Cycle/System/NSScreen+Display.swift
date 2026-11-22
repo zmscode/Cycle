@@ -13,3 +13,19 @@ extension NSScreen {
 			width: visibleFrame.width, height: visibleFrame.height)
 	}
 }
+
+extension NSScreen {
+	/// A stable name for the display (its UUID), the same across restarts and however the
+	/// displays are arranged.
+	var displayUUID: String? {
+		guard let displayID,
+			let uuid = CGDisplayCreateUUIDFromDisplayID(displayID)?.takeRetainedValue()
+		else { return nil }
+		return CFUUIDCreateString(nil, uuid) as String
+	}
+
+	/// The screen showing the display named `uuid`, if it's connected.
+	static func screen(uuid: String) -> NSScreen? {
+		screens.first { $0.displayUUID == uuid }
+	}
+}

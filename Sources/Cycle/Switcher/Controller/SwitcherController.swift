@@ -64,8 +64,7 @@ final class SwitcherController {
 
 	// Drag-to-tile (see SwitcherController+Tiling).
 	let dragTracker = DragTracker()
-	let tilingStore = TilingStore()
-	let tiler = WindowTiler()
+	let tiling = TilingCoordinator()
 	private(set) lazy var tilingOverlay = TilingOverlayPanel(state: state)
 	/// The click that ends a drag reaches the card too; it mustn't switch windows.
 	var ignoresNextClick = false
@@ -88,6 +87,14 @@ final class SwitcherController {
 	}
 
 	func start() {
+		// `cycle.config` edited by hand: show the new values and apply them.
+		ConfigStore.shared.onExternalChange = { [weak self] in
+			self?.settingsPanel.settings.reload()
+			self?.settingsChanged()
+		}
+		ConfigStore.shared.watch()
+		tiling.onPlaced = { [weak self] ids in self?.windowsMoved(ids) }
+		tiling.start()
 		mru.start()
 		setUpDragTracker()
 		tap.handler = { [weak self] type, event in
@@ -146,6 +153,8 @@ final class SwitcherController {
 		trace(
 			"loaded \(snapshot.windows.count) windows commitWhenLoaded=\(commitWhenLoaded) presentWhenLoaded=\(presentWhenLoaded)"
 		)
+		tiling.sessionLoaded(snapshot.windows)
+		mru.touchFrontmost()
 		var windows = mru.sort(snapshot.windows, zOrder: snapshot.zOrder)
 		if Settings.currentSpaceOnly { windows.removeAll { $0.isOnOtherSpace } }
 		if !Settings.includeHiddenWindows { windows.removeAll { $0.isMinimized || $0.isAppHidden } }
@@ -251,6 +260,7 @@ final class SwitcherController {
 		cancelDrag()
 		pointerWindowID = nil
 		state.markedIDs = []
+		state.tilingNotice = nil
 		panel.hide()
 	}
 

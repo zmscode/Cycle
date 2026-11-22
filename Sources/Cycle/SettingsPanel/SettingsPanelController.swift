@@ -102,6 +102,7 @@ final class SettingsPanelController {
 			permissions: .shared,
 			tapIsRunning: tapIsRunning,
 			onSetup: { [weak self] in self?.showSetup() },
+			onOpenConfig: { ConfigStore.shared.openInEditor() },
 			onQuit: { NSApp.terminate(nil) })
 		let host = NSHostingView(rootView: view)
 		host.sizingOptions = [.intrinsicContentSize]

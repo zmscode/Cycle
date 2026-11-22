@@ -9,6 +9,8 @@ enum AXWindows {
 		let title: String?
 		let frame: CGRect
 		let isMinimized: Bool
+		/// A dialog or panel rather than a document window.
+		let isDialog: Bool
 	}
 
 	static func collect(pids: [pid_t]) -> [pid_t: [Entry]] {
@@ -39,7 +41,8 @@ enum AXWindows {
 				id: wid, element: element,
 				title: element.attribute(kAXTitleAttribute),
 				frame: CGRect(origin: position, size: size),
-				isMinimized: element.attribute(kAXMinimizedAttribute) ?? false
+				isMinimized: element.attribute(kAXMinimizedAttribute) ?? false,
+				isDialog: subrole == kAXDialogSubrole
 			)
 		}
 	}

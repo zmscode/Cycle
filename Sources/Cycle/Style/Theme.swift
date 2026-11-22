@@ -96,6 +96,10 @@ enum Theme {
 		/// A tiled window moved or resized by more than this is no longer tiled.
 		static let movedTolerance: CGFloat = 24
 		static let ghostWidth: CGFloat = 150
+		/// Over a drop target the ghost shrinks to this share of its size, its top-left
+		/// corner this far down and right of the pointer, clear of the slot being aimed at.
+		static let ghostAsideScale: CGFloat = 0.4
+		static let ghostAsideGap: CGFloat = 14
 		/// Preset chips under the board.
 		static let chipMaxWidth: CGFloat = 64
 		static let chipSpacing: CGFloat = 10
@@ -115,6 +119,13 @@ enum Theme {
 		/// dynamic, so it follows changes live, and unlike `Color.accentColor` it doesn't
 		/// turn grey in Cycle's panels, which never become the active window.
 		static let selection = Color(nsColor: .controlAccentColor)
+		/// Tiling's marks, drop highlights and preview outlines: the accent colour, unless
+		/// it's Graphite, where grey marks would vanish against grey tiles; then blue.
+		static var mark: Color {
+			let accent = NSColor.controlAccentColor.usingColorSpace(.deviceRGB)
+			return (accent?.saturationComponent ?? 0) < 0.15
+				? Color(nsColor: .systemBlue) : Color(nsColor: .controlAccentColor)
+		}
 		static let close = Color(red: 1.0, green: 0.37, blue: 0.34)
 		static let minimize = Color(red: 1.0, green: 0.74, blue: 0.18)
 		static let fullScreen = Color(red: 0.16, green: 0.79, blue: 0.25)

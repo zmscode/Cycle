@@ -88,4 +88,38 @@ extension TilingBoard {
 				axis: axis, position: 1 / Double(ids.count), first: .pane(first),
 				second: row(Array(ids.dropFirst()), along: axis)))
 	}
+
+	/// The current layout with `ids` in its empty slots (main slot first), when it's already
+	/// laid out as `preset` and has room for all of them that aren't tiled yet; nil
+	/// otherwise. Picking the preset that's already on screen adds to it rather than
+	/// reshuffling it.
+	func filling(_ preset: TilingPreset, with ids: [CGWindowID]) -> RiftLayout<CGWindowID>? {
+		guard let layout, Self.sameShape(layout, preset.layout(mainShare: mainShare)) else {
+			return nil
+		}
+		let incoming = ids.filter { !layout.contains($0) }
+		let empty = preset.slotOrder(mainShare: mainShare).filter {
+			layout.contains(TilingSlot.placeholder($0))
+		}
+		guard !incoming.isEmpty, empty.count >= incoming.count else { return nil }
+		var result = layout
+		for (slot, id) in zip(empty, incoming) {
+			result =
+				result.replacing(.pane(TilingSlot.placeholder(slot))) { _ in .pane(id) } ?? result
+		}
+		return result
+	}
+
+	/// Whether two layouts split the same way, whatever their panes.
+	private static func sameShape<A, B>(_ a: RiftLayout<A>, _ b: RiftLayout<B>) -> Bool {
+		switch (a, b) {
+		case (.pane, .pane):
+			return true
+		case (.split(let x), .split(let y)):
+			return x.axis == y.axis && abs(x.position - y.position) < 0.01
+				&& sameShape(x.first, y.first) && sameShape(x.second, y.second)
+		default:
+			return false
+		}
+	}
 }

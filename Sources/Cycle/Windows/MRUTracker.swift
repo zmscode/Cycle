@@ -57,6 +57,16 @@ final class MRUTracker {
 		}
 	}
 
+	/// Counts the frontmost app's focused window as just used. A session starts from the
+	/// window being left, even if a focus change was missed (a window that opened while
+	/// its app was already active).
+	func touchFrontmost() {
+		guard let app = NSWorkspace.shared.frontmostApplication,
+			app.processIdentifier != ProcessInfo.processInfo.processIdentifier
+		else { return }
+		touchFocusedWindow(of: app.processIdentifier)
+	}
+
 	func touch(_ windowID: CGWindowID) {
 		lastUse[windowID] = Date.timeIntervalSinceReferenceDate
 	}

@@ -6,8 +6,8 @@ struct DropHighlight: View {
 	var body: some View {
 		let shape = RoundedRectangle(cornerRadius: Theme.Tiling.tileRadius)
 		shape
-			.fill(Theme.Colors.selection.opacity(0.28))
-			.strokeBorder(Theme.Colors.selection, lineWidth: 2)
+			.fill(Theme.Colors.mark.opacity(0.28))
+			.strokeBorder(Theme.Colors.mark, lineWidth: 2)
 			.allowsHitTesting(false)
 	}
 }

@@ -8,11 +8,12 @@ struct SettingsPanelView: View {
 	let permissions: Permissions
 	let tapIsRunning: () -> Bool
 	let onSetup: () -> Void
+	let onOpenConfig: () -> Void
 	let onQuit: () -> Void
 
 	var body: some View {
 		VStack(spacing: 0) {
-			SettingsPanelHeader(onQuit: onQuit)
+			SettingsPanelHeader(onOpenConfig: onOpenConfig, onQuit: onQuit)
 			Divider()
 				.padding(.horizontal, Theme.Panel.padding)
 			VStack(spacing: ControlTileMetrics.spacing) {
@@ -40,6 +41,17 @@ struct SettingsPanelView: View {
 					}
 				}
 				TilingTile(settings: settings)
+				Grid(horizontalSpacing: ControlTileMetrics.spacing) {
+					GridRow {
+						ToggleTile(
+							title: "Fill Gaps", subtitle: "When Closed",
+							systemImage: "rectangle.split.2x1", isOn: $settings.tilingFillsGaps)
+						ToggleTile(
+							title: "Restore", subtitle: "Layouts",
+							systemImage: "clock.arrow.circlepath",
+							isOn: $settings.tilingRestoresLayouts)
+					}
+				}
 				PermissionsTile(
 					permissions: permissions,
 					tapIsRunning: permissions.accessibility ? tapIsRunning() : true,

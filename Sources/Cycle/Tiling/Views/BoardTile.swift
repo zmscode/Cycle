@@ -1,31 +1,57 @@
 import SwiftUI
 
-/// A window already tiled, drawn on the board in its place.
+/// A window on the board, in its place now or where the drop would put it.
 struct BoardTile: View {
 	let window: SwitcherWindow?
 	let image: NSImage?
-	/// The window being dragged: shown faintly, since it's about to move.
-	let isDragged: Bool
+	let role: BoardTileRole
 
 	private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: Theme.Tiling.tileRadius) }
 
 	var body: some View {
-		ZStack {
-			shape.fill(.white.opacity(0.08))
-			if let image {
-				Image(nsImage: image)
-					.resizable()
-					.interpolation(.medium)
-					.aspectRatio(contentMode: .fill)
-			} else if let icon = window?.icon {
-				Image(nsImage: icon)
-					.resizable()
-					.aspectRatio(contentMode: .fit)
-					.frame(width: 28)
+		// The shape takes the tile's size; the picture fills it and is cut to it, whatever
+		// the window's shape (a wide window in a narrow slot mustn't spill out).
+		shape
+			.fill(.white.opacity(0.08))
+			.overlay(alignment: .top) {
+				// Pinned to the top, like the switcher's cards: the title bar stays in view.
+				if let image {
+					Image(nsImage: image)
+						.resizable()
+						.interpolation(.medium)
+						.aspectRatio(contentMode: .fill)
+				} else if let icon = window?.icon {
+					Image(nsImage: icon)
+						.resizable()
+						.aspectRatio(contentMode: .fit)
+						.frame(maxWidth: 28, maxHeight: 28)
+				}
 			}
+			.clipShape(shape)
+			.overlay {
+				if case .incoming = role {
+					DropHighlight()
+				} else {
+					shape.strokeBorder(.white.opacity(0.18))
+				}
+			}
+			.overlay(alignment: .topTrailing) {
+				if let number {
+					BoardTileNumber(number: number).padding(3)
+				}
+			}
+			.opacity(opacity)
+	}
+
+	private var number: Int? {
+		if case .incoming(let number) = role { number } else { nil }
+	}
+
+	private var opacity: Double {
+		switch role {
+		case .resting: 0.85
+		case .lifted: 0.35
+		case .incoming: 1
 		}
-		.clipShape(shape)
-		.overlay { shape.strokeBorder(.white.opacity(0.18)) }
-		.opacity(isDragged ? 0.35 : 0.85)
 	}
 }

@@ -1,0 +1,30 @@
+import Foundation
+
+/// Tiling's settings in `cycle.config`.
+struct TilingConfig: Codable, Equatable {
+	/// Points between tiled windows.
+	var gap = 10.0
+	/// Points between tiled windows and the screen's edges.
+	var margin = 10.0
+	/// The main window's share of the width in Main + Stack and Centre (0.5–0.75).
+	var mainShare = 0.6
+	/// The presets on the board, by name, in the order ⌘1, ⌘2… pick them.
+	var presets = TilingPreset.defaultEnabled.map(\.rawValue)
+	/// Close gaps when a tiled window closes or its app quits.
+	var fillGaps = true
+	/// Put remembered layouts back when Cycle starts and when a tiled app reopens.
+	var restoreLayouts = true
+
+	init() {}
+
+	init(from decoder: Decoder) throws {
+		let container = try decoder.container(keyedBy: CodingKeys.self)
+		let defaults = TilingConfig()
+		gap = container.value(.gap, default: defaults.gap)
+		margin = container.value(.margin, default: defaults.margin)
+		mainShare = container.value(.mainShare, default: defaults.mainShare)
+		presets = container.value(.presets, default: defaults.presets)
+		fillGaps = container.value(.fillGaps, default: defaults.fillGaps)
+		restoreLayouts = container.value(.restoreLayouts, default: defaults.restoreLayouts)
+	}
+}
