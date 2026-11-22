@@ -9,11 +9,3 @@ struct BoardPlacement {
 	/// The preset chips in a row under it.
 	var chips: [PresetChip]
 }
-
-/// One preset on the board.
-struct PresetChip: Identifiable {
-	let preset: TilingPreset
-	/// The chip's picture of the preset.
-	let rect: CGRect
-	var id: String { preset.id }
-}

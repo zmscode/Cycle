@@ -22,7 +22,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 	/// There's no menu-bar item: opening Cycle again (Finder, Spotlight, the Dock) shows
 	/// its settings. They're also behind the gear in the switcher.
-	func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool) -> Bool {
+	func applicationShouldHandleReopen(_ sender: NSApplication, hasVisibleWindows flag: Bool)
+		-> Bool
+	{
 		controller.settingsPanel.showStandalone()
 		return false
 	}

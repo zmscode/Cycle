@@ -1,54 +1,4 @@
-import AppKit
-import Carbon.HIToolbox
-
-/// The held modifier that opens the switcher — DockDoor's `KeyboardInitializerModifier`
-/// (option / control / command / shift). The trailing key is Tab.
-enum InitializerModifier: String, CaseIterable {
-	case command, option, control
-
-	var flag: CGEventFlags {
-		switch self {
-		case .command: .maskCommand
-		case .option: .maskAlternate
-		case .control: .maskControl
-		}
-	}
-
-	var name: String {
-		switch self {
-		case .command: "Command"
-		case .option: "Option"
-		case .control: "Control"
-		}
-	}
-
-	var symbol: String {
-		switch self {
-		case .command: "⌘"
-		case .option: "⌥"
-		case .control: "⌃"
-		}
-	}
-}
-
-/// DockDoor's `WindowCycleActivationMode`: commit when the modifier is released, or keep
-/// the panel open until Return / click.
-enum ActivationMode: String, CaseIterable {
-	case onKeyRelease, onConfirmation
-}
-
-enum Key {
-	static let tab = CGKeyCode(kVK_Tab)
-	static let escape = CGKeyCode(kVK_Escape)
-	static let returnKey = CGKeyCode(kVK_Return)
-	static let keypadEnter = CGKeyCode(kVK_ANSI_KeypadEnter)
-	static let left = CGKeyCode(kVK_LeftArrow)
-	static let right = CGKeyCode(kVK_RightArrow)
-	static let up = CGKeyCode(kVK_UpArrow)
-	static let down = CGKeyCode(kVK_DownArrow)
-	static let grave = CGKeyCode(kVK_ANSI_Grave)
-	static let delete = CGKeyCode(kVK_Delete)
-}
+import Foundation
 
 /// User settings, stored in UserDefaults under DockDoor's key names where one exists.
 enum Settings {
@@ -83,7 +33,10 @@ enum Settings {
 
 	/// The switcher layout.
 	static var layout: SwitcherStyle {
-		get { SwitcherStyle(rawValue: defaults.string(forKey: "windowSwitcherLayout") ?? "") ?? .grouped }
+		get {
+			SwitcherStyle(rawValue: defaults.string(forKey: "windowSwitcherLayout") ?? "")
+				?? .grouped
+		}
 		set { defaults.set(newValue.rawValue, forKey: "windowSwitcherLayout") }
 	}
 

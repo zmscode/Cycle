@@ -93,6 +93,27 @@ The build is ad hoc signed with a designated requirement of its bundle id, so gr
 rebuilds. `just reset-permissions` clears them. Set `CYCLE_SIGN_IDENTITY` to sign with a
 certificate instead.
 
+### Project layout
+
+Everything is in `Sources/Cycle`, one type per file:
+
+| Folder | What's in it |
+| --- | --- |
+| `App` | Entry point and app delegate |
+| `Settings` | Stored settings and the observable copy the settings panel edits |
+| `Input` | The keyboard event tap and key codes |
+| `System` | Private SkyLight / AX calls, permissions, AppKit and AX helpers |
+| `Windows` | Listing windows, thumbnails, recency order, focusing and window actions |
+| `Switcher/Controller` | The session controller, split by concern (keyboard, navigation, search, mouse, actions, settings) |
+| `Switcher/Model`, `Panel`, `Views`, `Cards` | Session state, the panel and its layout, and the SwiftUI views |
+| `Tiling/Model` | Presets, the board (targets and drops) and drag state, built on RiftCore |
+| `Tiling/Engine` | The per-screen layout store and the Accessibility window mover |
+| `Tiling/Interaction` | Mouse tracking, the controller's tiling extension and the overlay panel |
+| `Tiling/Views` | The board, presets, ghosts and mark badges |
+| `SettingsPanel` | The settings panel, its tiles and controls |
+| `Setup` | First-run permissions window and drag-to-grant |
+| `Style` | Theme constants and shared view styles |
+
 ## Releasing
 
 Bump `VERSION`, commit, then `just release`: it builds and zips the app, publishes

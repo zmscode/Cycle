@@ -1,0 +1,91 @@
+import CoreGraphics
+import RiftCore
+
+/// The layout a drop produces.
+extension TilingBoard {
+	/// The layout after dropping `ids` (the window picked up first) on `target`; nil when
+	/// nothing changes. Several windows go side by side, or stacked along a screen edge or
+	/// a split's edge, sharing the space evenly.
+	func dropping(_ ids: [CGWindowID], on target: TileTarget) -> RiftLayout<CGWindowID>? {
+		guard let first = ids.first else { return nil }
+		if case .preset(let preset, let slot) = target {
+			return applying(preset, putting: ids, from: slot)
+		}
+		if ids.count == 1 { return dropping(first, on: target) }
+
+		let dragged = Set(ids)
+		var rest = layout
+		for id in ids where rest?.contains(id) == true {
+			rest = rest?.removing(.pane(id))?.remaining
+		}
+		switch target {
+		case .fill, .preset:
+			return Self.row(ids, along: .horizontal)
+		case .edge(let edge):
+			let group = Self.row(ids, along: edge.axis.cross)
+			return rest?.wrapping(group, edge: edge) ?? Self.row(ids, along: .horizontal)
+		case .pane(let pane, let zone):
+			guard !dragged.contains(pane), let rest else { return nil }
+			guard let edge = zone.edge else {
+				return rest.replacing(.pane(pane)) { _ in Self.row(ids, along: .horizontal) }
+			}
+			return rest.inserting(
+				Self.row(ids, along: edge.axis.cross), at: .pane(pane), edge: edge)
+		}
+	}
+
+	private func dropping(_ id: CGWindowID, on target: TileTarget) -> RiftLayout<CGWindowID>? {
+		guard let layout, layout.paneIDs != [id] else { return .pane(id) }
+		switch target {
+		case .fill, .preset:
+			return .pane(id)
+		case .edge(let edge):
+			guard let rest = layout.contains(id) ? layout.removing(.pane(id))?.remaining : layout
+			else { return .pane(id) }
+			return rest.wrapping(.pane(id), edge: edge)
+		case .pane(let pane, let zone):
+			guard pane != id else { return nil }
+			if layout.contains(id) {
+				// Rift's own pane move: beside the target, or swapped with it.
+				return layout.moving(id, to: pane, zone: zone)
+			}
+			guard let edge = zone.edge else {
+				// Dropped in the middle: it takes that window's (or empty slot's) place.
+				return layout.replacing(.pane(pane)) { _ in .pane(id) }
+			}
+			return layout.splitting(pane, with: id, edge: edge)
+		}
+	}
+
+	/// `preset` with the first of `ids` in `slot` and the rest of them in the following
+	/// slots (main slot first), then the windows already tiled, then placeholders in any
+	/// left over. Windows that don't fit stay where they are, untiled.
+	private func applying(_ preset: TilingPreset, putting ids: [CGWindowID], from slot: Int)
+		-> RiftLayout<CGWindowID>
+	{
+		let dragged = Set(ids)
+		let tiled = (layout?.paneIDs ?? []).filter {
+			!dragged.contains($0) && !TilingSlot.isPlaceholder($0)
+		}
+		var waiting = Array(ids.dropFirst()) + tiled
+		var assigned: [Int: CGWindowID] = [:]
+		if let first = ids.first { assigned[slot] = first }
+		for other in preset.slotOrder(mainShare: mainShare) where other != slot {
+			guard !waiting.isEmpty else { break }
+			assigned[other] = waiting.removeFirst()
+		}
+		return preset.layout(mainShare: mainShare).mapPanes {
+			assigned[$0] ?? TilingSlot.placeholder($0)
+		}
+	}
+
+	/// `ids` side by side along `axis`, sharing it evenly.
+	private static func row(_ ids: [CGWindowID], along axis: RiftAxis) -> RiftLayout<CGWindowID> {
+		guard let first = ids.first else { preconditionFailure("an empty row") }
+		guard ids.count > 1 else { return .pane(first) }
+		return .split(
+			RiftSplit(
+				axis: axis, position: 1 / Double(ids.count), first: .pane(first),
+				second: row(Array(ids.dropFirst()), along: axis)))
+	}
+}
