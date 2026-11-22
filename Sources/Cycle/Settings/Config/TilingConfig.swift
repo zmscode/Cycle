@@ -22,6 +22,14 @@ struct TilingConfig: Codable, Equatable {
 	var animate = true
 	/// How long the glide takes, in seconds.
 	var animationDuration = 0.2
+	/// A right-click outside the switcher undoes the last tiling change (off: right-clicks
+	/// reach the app underneath as usual).
+	var rightClickUndo = false
+	/// A right-click on a card opens the tiling menu (off: it marks the window, and
+	/// Option-right-click opens the menu).
+	var rightClickMenu = false
+	/// A note with Undo at the foot of the switcher after each tiling change.
+	var showNotes = true
 	/// Saved workspaces: named layouts across every display.
 	var workspaces: [Workspace] = []
 
@@ -42,5 +50,8 @@ struct TilingConfig: Codable, Equatable {
 		animationDuration = container.value(
 			.animationDuration, default: defaults.animationDuration)
 		workspaces = container.value(.workspaces, default: defaults.workspaces)
+		rightClickUndo = container.value(.rightClickUndo, default: defaults.rightClickUndo)
+		rightClickMenu = container.value(.rightClickMenu, default: defaults.rightClickMenu)
+		showNotes = container.value(.showNotes, default: defaults.showNotes)
 	}
 }

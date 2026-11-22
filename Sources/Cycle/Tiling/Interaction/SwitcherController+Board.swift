@@ -115,9 +115,9 @@ extension SwitcherController {
 		// The board's tiles have a menu of their own.
 		if isOnBoard(appKit) { return false }
 		if settingsPanel.isVisible, settingsPanel.frame?.contains(appKit) == true { return false }
-		tiling.undo { [weak self] label in
-			self?.showNotice(label.map { "Undid \($0)" } ?? "Nothing to undo")
-		}
+		// Off by default: a right-click normally belongs to the app under the pointer.
+		guard Settings.tilingRightClickUndo else { return false }
+		undoTiling()
 		return true
 	}
 }

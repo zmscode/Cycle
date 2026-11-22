@@ -10,8 +10,8 @@ final class BoardTileView: NSView {
 	var onBegin: ((CGWindowID) -> Void)?
 	var onMove: ((CGPoint) -> Void)?
 	var onEnd: (() -> Void)?
-	/// The menu for a right-clicked tile.
-	var menuFor: ((CGWindowID) -> NSMenu?)?
+	/// A tile was right-clicked: show its menu.
+	var onRightClick: ((CGWindowID, NSEvent) -> Void)?
 
 	private var pressed: (id: CGWindowID, location: CGPoint)?
 	private var isDragging = false
@@ -70,8 +70,8 @@ final class BoardTileView: NSView {
 	}
 
 	override func rightMouseDown(with event: NSEvent) {
-		guard let id = tileAt(NSEvent.mouseLocation), let menu = menuFor?(id) else { return }
-		NSMenu.popUpContextMenu(menu, with: event, for: self)
+		guard let id = tileAt(NSEvent.mouseLocation) else { return }
+		onRightClick?(id, event)
 	}
 
 	/// The faintest fill: a borderless window lets clicks through wherever it's fully

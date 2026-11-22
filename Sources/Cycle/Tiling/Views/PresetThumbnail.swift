@@ -11,6 +11,8 @@ struct PresetThumbnail: View {
 	var slotNumbers: [Int: Int] = [:]
 	var isEnabled = true
 
+	@Environment(\.colorSchemeContrast) private var contrast
+
 	var body: some View {
 		Canvas { context, size in
 			let frames = TilingBoard.chipFrames(
@@ -18,17 +20,23 @@ struct PresetThumbnail: View {
 			for (slot, frame) in frames {
 				let path = Path(roundedRect: frame, cornerRadius: 3)
 				let lit = highlightedSlots.contains(slot)
+				let increased = contrast == .increased
 				context.fill(
 					path,
 					with: .color(
-						lit ? Theme.Colors.mark : .white.opacity(isEnabled ? 0.28 : 0.1)))
+						lit
+							? Theme.Colors.mark
+							: .white.opacity(isEnabled ? (increased ? 0.5 : 0.28) : (increased ? 0.22 : 0.1))))
+				if increased, !lit {
+					context.stroke(path, with: .color(.white.opacity(0.6)), lineWidth: 0.5)
+				}
 				if lit {
 					context.stroke(path, with: .color(.white.opacity(0.6)), lineWidth: 1)
 				}
 				if let number = slotNumbers[slot] {
 					context.draw(
 						Text(number, format: .number)
-							.font(.system(size: 8, weight: .bold).monospacedDigit())
+							.font(.system(size: 10, weight: .bold).monospacedDigit())
 							.foregroundStyle(.white),
 						at: CGPoint(x: frame.midX, y: frame.midY))
 				}

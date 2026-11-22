@@ -19,10 +19,14 @@ final class SwitcherState {
 	var searchQuery = ""
 	/// A window being dragged onto the tiling board.
 	var drag: WindowDrag?
+	/// Windows just let go where they couldn't land, fading out.
+	var evaporating: EvaporatingDrag?
 	/// The tiling board shown under the switcher while its screen is tiled (no drag).
 	var board: TilingBoard?
-	/// A brief note after tiling from the keyboard ("Thirds · Helium left untiled").
-	var tilingNotice: String?
+	/// A note after a tiling change ("Thirds · Helium left untiled"), with Undo.
+	var tilingNotice: TilingNote?
+	/// The pointer is on the note: it stays until the pointer leaves.
+	var isHoldingNotice = false
 	/// Tiled windows bigger than their slot (an app's minimum size): outlined on the board.
 	var unfitIDs: Set<CGWindowID> = []
 	/// Windows right-clicked for tiling together, in the order they were marked.

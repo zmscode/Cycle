@@ -19,9 +19,17 @@ extension SwitcherController {
 			self?.panelOwns(window) ?? false
 		}
 		dragTracker.onPress = { [weak self] in self?.ignoresNextClick = false }
-		dragTracker.onRightClick = { [weak self] in
-			guard let self, let id = self.pointerWindowID else { return }
-			self.toggleMark(id)
+		dragTracker.onRightClick = { [weak self] event in
+			guard let self, let id = self.pointerWindowID,
+				let view = event.window?.contentView
+			else { return }
+			// Marking by default; the menu when that's turned on. Option swaps the two.
+			let opensMenu = Settings.tilingRightClickMenu != event.modifierFlags.contains(.option)
+			if opensMenu {
+				self.showMenu(for: id, onBoard: false, event: event, in: view)
+			} else {
+				self.toggleMark(id)
+			}
 		}
 		dragTracker.onBegin = { [weak self] id in self?.beginDrag(id, fromBoard: false) }
 		dragTracker.onMove = { [weak self] point in self?.moveDrag(to: point) }
@@ -57,13 +65,15 @@ extension SwitcherController {
 		drag.target = drag.board.target(at: drag.pointer, dragging: drag.windowIDs)
 		dwell(on: &drag)
 		state.drag = drag
+		dragCursor(for: drag).set()
 	}
 
 	/// Resting on another display's chip in the board's header switches the board to that
 	/// display after a moment; moving off it calls that off.
 	private func dwell(on drag: inout WindowDrag) {
 		let chip = drag.board.placement.displays.first {
-			$0.rect.insetBy(dx: -3, dy: -3).contains(drag.pointer)
+			// At least the 20 pt minimum target, around the smaller chip.
+			$0.rect.insetBy(dx: -4, dy: -4).contains(drag.pointer)
 		}
 		// On a display chip nothing is dropped, whatever's beneath it.
 		if chip != nil { drag.target = nil }
@@ -97,14 +107,15 @@ extension SwitcherController {
 		drag.target = drag.board.target(at: drag.pointer, dragging: drag.windowIDs)
 		drag.updatePreview()
 		state.drag = drag
-		NSHapticFeedbackManager.defaultPerformer.perform(.levelChange, performanceTime: .now)
+		Haptics.confirm()
 	}
 
 	func endDrag() {
 		guard let drag = state.drag else { return }
 		// The release also reaches the card as a click; this drag has handled it.
 		if !drag.fromBoard { ignoresNextClick = true }
-		cancelDrag()
+		let lands = drag.untiles || (drag.target != nil && drag.result != nil)
+		cancelDrag(evaporating: !lands)
 		if drag.untiles {
 			untile(drag.windowID)
 			return releaseIfModifierUp()
@@ -114,6 +125,7 @@ extension SwitcherController {
 		if drag.windowIDs.count > 1 { state.markedIDs = [] }
 		let label: String = if case .preset(let preset, _) = target { preset.title } else { "Move" }
 		tile(layout, on: drag.board, screen: drag.screen, focusing: drag.windowID, label: label)
+		showNotice(label == "Move" ? "Moved \(name(of: drag.windowID))" : label)
 	}
 
 	/// Right-click or Space: marks a window for tiling together, or unmarks it.
@@ -126,7 +138,7 @@ extension SwitcherController {
 		} else {
 			state.markedIDs.append(id)
 		}
-		NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+		Haptics.confirm()
 	}
 
 	/// The modifier and a number: lays out the screen the switcher is on with the board's
@@ -134,7 +146,7 @@ extension SwitcherController {
 	/// go in its slots, main slot first.
 	func tileWithPreset(at index: Int) {
 		let presets = Settings.tilingPresets
-		guard isActive, presets.indices.contains(index), let screen = panelScreen else { return }
+		guard isActive, presets.indices.contains(index) else { return }
 		let preset = presets[index]
 		let ids: [CGWindowID]
 		if let drag = state.drag {
@@ -148,6 +160,13 @@ extension SwitcherController {
 		} else {
 			return
 		}
+		tile(ids, with: preset)
+	}
+
+	/// Lays out the switcher's screen with `preset`, `ids` in its slots, main slot first
+	/// (or in the empty slots, when the screen is already laid out that way).
+	func tile(_ ids: [CGWindowID], with preset: TilingPreset) {
+		guard isActive, let screen = panelScreen, !ids.isEmpty else { return }
 		let board = TilingBoard.offscreen(
 			on: screen, layout: tiling.layout(for: screen, windows: state.recentOrder))
 		guard let slot = preset.slotOrder(mainShare: board.mainShare).first,
@@ -155,8 +174,8 @@ extension SwitcherController {
 				?? board.dropping(ids, on: .preset(preset, slot: slot))
 		else { return }
 		state.markedIDs = []
-		showNotice(preset.title + leftOutNote(before: board.layout, after: layout))
 		tile(layout, on: board, screen: screen, focusing: ids[0], label: preset.title)
+		showNotice(preset.title + leftOutNote(before: board.layout, after: layout))
 	}
 
 	/// " · Helium left untiled" for tiled windows `after` doesn't keep, else nothing.
@@ -174,18 +193,59 @@ extension SwitcherController {
 		}
 	}
 
-	/// Shows `text` at the foot of the switcher for a moment.
-	func showNotice(_ text: String) {
+	/// Shows `text` at the foot of the switcher, with an Undo button for the change just
+	/// made (unless `offersUndo` is false), and has VoiceOver read it. It stays several
+	/// seconds, longer with VoiceOver on, and as long as the pointer is on it.
+	func showNotice(_ text: String, offersUndo: Bool = true) {
 		trace("notice \(text)")
-		state.tilingNotice = text
-		let shown = text
-		DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) { [weak self] in
-			guard let self, self.state.tilingNotice == shown else { return }
+		guard isActive else { return }
+		// Notes turned off: VoiceOver still hears what happened.
+		guard Settings.tilingShowsNotes else {
+			if NSWorkspace.shared.isVoiceOverEnabled { announce(text) }
+			return
+		}
+		noticeSerial += 1
+		let note = TilingNote(
+			text: text, undoLabel: offersUndo ? tiling.undoLabel : nil, serial: noticeSerial)
+		state.tilingNotice = note
+		state.isHoldingNotice = false
+		announce(text)
+		let seconds: TimeInterval = NSWorkspace.shared.isVoiceOverEnabled ? 12 : 6
+		dismissNotice(note, after: seconds)
+	}
+
+	private func announce(_ text: String) {
+		NSAccessibility.post(
+			element: NSApp as Any, notification: .announcementRequested,
+			userInfo: [
+				.announcement: text,
+				.priority: NSAccessibilityPriorityLevel.high.rawValue,
+			])
+	}
+
+	private func dismissNotice(_ note: TilingNote, after seconds: TimeInterval) {
+		DispatchQueue.main.asyncAfter(deadline: .now() + seconds) { [weak self] in
+			guard let self, self.state.tilingNotice == note else { return }
+			// Still being read or reached for: check again shortly.
+			if self.state.isHoldingNotice { return self.dismissNotice(note, after: 1) }
 			self.state.tilingNotice = nil
 		}
 	}
 
-	private func canTile(_ id: CGWindowID) -> Bool {
+	/// Undoes the last tiling change (the note's Undo button, a menu, or a right-click
+	/// outside the switcher when that's turned on).
+	func undoTiling() {
+		tiling.undo { [weak self] label in
+			self?.showNotice(label.map { "Undid \($0)" } ?? "Nothing to undo")
+		}
+	}
+
+	/// A window's app name, for notes and menus.
+	func name(of id: CGWindowID) -> String {
+		state.recentOrder.first { $0.id == id }?.appName ?? "Window"
+	}
+
+	func canTile(_ id: CGWindowID) -> Bool {
 		state.windows.first { $0.id == id }.map(WindowTiler.canTile) ?? false
 	}
 
@@ -198,17 +258,46 @@ extension SwitcherController {
 
 	/// Puts the dragged window down without tiling anything. The board stays if the
 	/// screen is tiled (it was showing before the drag).
-	func cancelDrag() {
+	/// With `evaporating`, the windows fade out where they were let go, showing that
+	/// nothing landed.
+	func cancelDrag(evaporating: Bool = false) {
 		displayDwellWork?.cancel()
 		displayDwellWork = nil
 		guard let drag = state.drag else { return }
 		state.drag = nil
+		NSCursor.arrow.set()
+		if evaporating {
+			noticeSerial += 1
+			state.evaporating = EvaporatingDrag(
+				windowIDs: [drag.windowID] + drag.windowIDs.filter { $0 != drag.windowID },
+				point: drag.pointer, serial: noticeSerial)
+			let shown = state.evaporating
+			DispatchQueue.main.asyncAfter(deadline: .now() + Theme.Tiling.evaporateDuration + 0.05)
+			{ [weak self] in
+				guard let self, self.state.evaporating == shown else { return }
+				self.state.evaporating = nil
+				if self.state.drag == nil, self.state.board == nil { self.tilingOverlay.hide() }
+			}
+		}
 		if state.board == nil {
-			tilingOverlay.hide()
+			if !evaporating { tilingOverlay.hide() }
 			if drag.fromBoard { hideBoardTiles() }
 		} else {
 			showBoardDividers()
 		}
+	}
+
+	/// The pointer for a drag: a puff of smoke when letting go untiles the window, "not
+	/// allowed" over its own tile, the closed hand otherwise.
+	private func dragCursor(for drag: WindowDrag) -> NSCursor {
+		if drag.untiles { return .disappearingItem }
+		let slack = Theme.Tiling.boardSlack
+		let overBoard = drag.board.rect.insetBy(dx: -slack, dy: -slack).contains(drag.pointer)
+		let overChip = drag.board.placement.displays.contains {
+			$0.rect.insetBy(dx: -4, dy: -4).contains(drag.pointer)
+		}
+		if drag.target == nil, overBoard, !overChip { return .operationNotAllowed }
+		return .closedHand
 	}
 
 	/// Saves and applies `layout`, moving every window in it to its frame.

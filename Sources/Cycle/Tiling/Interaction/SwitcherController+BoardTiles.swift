@@ -2,7 +2,7 @@ import AppKit
 
 /// Tiles on the board can be picked up during a session: dropped on another tile they
 /// swap, on an edge they move there, and off the board they leave the layout. A
-/// right-click on a tile offers "Remove from Layout" and "Close Window".
+/// right-click on a tile opens the tiling menu (see +Menus).
 extension SwitcherController {
 	/// Wires the board's hit layer. Called once.
 	func setUpBoardTiles() {
@@ -11,7 +11,10 @@ extension SwitcherController {
 		tiles.onBegin = { [weak self] id in self?.beginDrag(id, fromBoard: true) }
 		tiles.onMove = { [weak self] point in self?.moveDrag(to: point) }
 		tiles.onEnd = { [weak self] in self?.endDrag() }
-		tiles.menuFor = { [weak self] id in self?.menu(forTile: id) }
+		tiles.onRightClick = { [weak self] id, event in
+			guard let self else { return }
+			self.showMenu(for: id, onBoard: true, event: event, in: self.boardTilePanel.tiles)
+		}
 	}
 
 	/// Puts the hit layer over the board while it shows (and keeps it there during a drag
@@ -40,33 +43,9 @@ extension SwitcherController {
 		return board.frames.first { board.toBoard($0.value).contains(local) }?.key
 	}
 
-	private func menu(forTile id: CGWindowID) -> NSMenu? {
-		let window = state.recentOrder.first { $0.id == id }
-		let menu = NSMenu()
-		if let window {
-			let title = NSMenuItem(title: window.appName, action: nil, keyEquivalent: "")
-			title.isEnabled = false
-			menu.addItem(title)
-			menu.addItem(.separator())
-		}
-		menu.addItem(
-			ClosureMenuItem("Remove from Layout", systemImage: "rectangle.badge.minus") {
-				[weak self] in
-				self?.untile(id)
-			})
-		if let window {
-			menu.addItem(
-				ClosureMenuItem("Close Window", systemImage: "xmark.rectangle") {
-					WindowActions.close(window)
-				})
-		}
-		return menu
-	}
-
 	/// Takes a window out of its layout, leaving it where it is.
 	func untile(_ id: CGWindowID) {
 		tiling.untile(id)
-		let name = state.recentOrder.first { $0.id == id }?.appName ?? "Window"
-		showNotice("\(name) untiled")
+		showNotice("\(name(of: id)) untiled")
 	}
 }

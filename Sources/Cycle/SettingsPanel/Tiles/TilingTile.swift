@@ -21,8 +21,11 @@ struct TilingTile: View {
 					PresetEditor(
 						draft: Binding {
 							draft ?? PresetDraft(startingWith: .pane(0), name: "")
-						} set: {
-							draft = $0
+						} set: { new in
+							// The editor fades out after Save or Cancel, and its name field
+							// writes its text back as it goes: that mustn't open a new draft.
+							guard let current = draft, current.id == new.id else { return }
+							draft = new
 						},
 						currentLayout: currentLayout(), onSave: save, onCancel: closeEditor,
 						onDelete: delete,

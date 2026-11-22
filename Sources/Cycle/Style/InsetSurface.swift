@@ -7,15 +7,19 @@ struct InsetSurface: ViewModifier {
 	let cornerRadius: CGFloat
 	var isHighlighted = false
 
+	@Environment(\.colorSchemeContrast) private var contrast
+
 	func body(content: Content) -> some View {
+		// Increase Contrast: brighter fills, so sections stand apart from the sheet.
+		let boost = contrast == .increased ? 2.0 : 1.0
 		content
 			.background {
 				RoundedRectangle(cornerRadius: cornerRadius)
 					.fill(
 						LinearGradient(
 							colors: [
-								.white.opacity(isHighlighted ? 0.12 : 0.07),
-								.white.opacity(isHighlighted ? 0.06 : 0.03),
+								.white.opacity((isHighlighted ? 0.12 : 0.07) * boost),
+								.white.opacity((isHighlighted ? 0.06 : 0.03) * boost),
 							],
 							startPoint: .top, endPoint: .bottom))
 			}

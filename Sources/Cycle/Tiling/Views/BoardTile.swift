@@ -8,6 +8,8 @@ struct BoardTile: View {
 	/// The window is bigger than its slot (its app won't go smaller).
 	var isUnfit = false
 
+	@Environment(\.colorSchemeContrast) private var contrast
+
 	private var shape: RoundedRectangle { RoundedRectangle(cornerRadius: Theme.Tiling.tileRadius) }
 
 	var body: some View {
@@ -36,13 +38,13 @@ struct BoardTile: View {
 				} else if isUnfit {
 					shape.strokeBorder(Theme.Colors.minimize, lineWidth: 1.5)
 				} else {
-					shape.strokeBorder(.white.opacity(0.18))
+					shape.strokeBorder(.white.opacity(contrast == .increased ? 0.6 : 0.18))
 				}
 			}
 			.overlay(alignment: .bottomLeading) {
 				if isUnfit, role.isResting {
 					Image(systemName: "exclamationmark.triangle.fill")
-						.font(.system(size: 9, weight: .bold))
+						.font(.system(size: 11, weight: .bold))
 						.foregroundStyle(Theme.Colors.minimize)
 						.shadow(color: .black.opacity(0.5), radius: 2)
 						.padding(3)

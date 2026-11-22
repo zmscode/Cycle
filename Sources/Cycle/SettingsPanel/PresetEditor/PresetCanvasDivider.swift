@@ -63,8 +63,7 @@ struct PresetCanvasDivider: View {
 				if snapping {
 					position = 0.5
 					if !isSnapped {
-						NSHapticFeedbackManager.defaultPerformer.perform(
-							.alignment, performanceTime: .now)
+						Haptics.aligned()
 					}
 				}
 				isSnapped = snapping

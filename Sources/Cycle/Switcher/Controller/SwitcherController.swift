@@ -85,6 +85,10 @@ final class SwitcherController {
 	var retileWork: DispatchWorkItem?
 	/// The card under the pointer, whether or not hovering has selected it.
 	var pointerWindowID: CGWindowID?
+	/// A context menu is open: the session stays open until it closes.
+	var isShowingMenu = false
+	/// Counts notes shown, so a note's timer only dismisses that note.
+	var noticeSerial = 0
 	/// Switches the board to the display chip the pointer rests on, mid-drag.
 	var displayDwellWork: DispatchWorkItem?
 
@@ -275,6 +279,7 @@ final class SwitcherController {
 		dragTracker.stop()
 		cancelDrag()
 		hideBoard()
+		state.evaporating = nil
 		pointerWindowID = nil
 		state.markedIDs = []
 		state.tilingNotice = nil

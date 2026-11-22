@@ -97,7 +97,7 @@ enum Theme {
 		static let movedTolerance: CGFloat = 24
 		static let ghostWidth: CGFloat = 150
 		/// How wide the board's divider grips are to grab.
-		static let boardGripThickness: CGFloat = 8
+		static let boardGripThickness: CGFloat = 12
 		/// Over a drop target the ghost shrinks to this share of its size, its top-left
 		/// corner this far down and right of the pointer, clear of the slot being aimed at.
 		static let ghostAsideScale: CGFloat = 0.4
@@ -110,10 +110,12 @@ enum Theme {
 		/// Space between slots in a preset's small picture.
 		static let chipGap: CGFloat = 2
 		/// The displays in the board's header, while there's more than one.
-		static let displayChipHeight: CGFloat = 16
+		static let displayChipHeight: CGFloat = 18
 		/// A window this much bigger than its slot (a share of the slot) gets room made for
 		/// it; a bigger one is outlined on the board instead.
 		static let fitTolerance: CGFloat = 0.15
+		/// How long windows dropped where they can't land take to fade away.
+		static let evaporateDuration: TimeInterval = 0.25
 		/// Resting on a display chip this long mid-drag switches the board to it.
 		static let displayDwell: TimeInterval = 0.4
 	}

@@ -22,7 +22,7 @@ extension TilingCoordinator {
 	func moveResize(to pointer: CGPoint) {
 		guard var session = resize else { return }
 		if session.move(to: pointer) {
-			NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+			Haptics.aligned()
 		}
 		resize = session
 		onLayoutChanged?(session.display, session.board.layout)

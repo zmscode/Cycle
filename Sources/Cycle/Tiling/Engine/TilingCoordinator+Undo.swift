@@ -4,9 +4,13 @@ import RiftCore
 /// Undo: each drop, preset and divider drag remembers the layout from before, and undo
 /// puts the last one back (right-click outside the switcher).
 extension TilingCoordinator {
-	private static let historyLimit = 20
+	/// Deep enough to unwind a whole session's rearranging.
+	private static let historyLimit = 100
 
 	var canUndo: Bool { !history.isEmpty }
+
+	/// What undo would put back ("Thirds", "Resize"), if anything.
+	var undoLabel: String? { history.last?.label }
 
 	/// Remembers `display`'s layout before a change named `label`.
 	func record(_ display: String, label: String) {

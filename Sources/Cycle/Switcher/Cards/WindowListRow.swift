@@ -48,6 +48,7 @@ struct WindowListRow: View {
 		.onTapGesture(perform: select)
 		.accessibilityElement(children: .combine)
 		.accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+		.tilingAccessibilityActions(window.id, controller: controller)
 	}
 
 	private func hoverChanged(_ inside: Bool) {

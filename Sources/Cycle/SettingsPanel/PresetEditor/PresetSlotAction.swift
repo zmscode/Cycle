@@ -11,7 +11,7 @@ struct PresetSlotAction: View {
 	var body: some View {
 		Button(action: action) {
 			Image(systemName: systemImage)
-				.font(.system(size: 9, weight: .bold))
+				.font(.system(size: 10, weight: .bold))
 				.foregroundStyle(.white)
 				.frame(width: 20, height: 20)
 				.background(

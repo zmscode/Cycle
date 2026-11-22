@@ -28,7 +28,9 @@ struct SwitcherView: View {
 		.glassSheet()
 		.overlay(alignment: .bottom) {
 			if let notice = state.tilingNotice {
-				TilingNotice(text: notice)
+				TilingNotice(
+					note: notice, onUndo: { controller.undoTiling() },
+					onHover: { state.isHoldingNotice = $0 })
 					.padding(.bottom, 10)
 					.transition(.move(edge: .bottom).combined(with: .opacity))
 			}

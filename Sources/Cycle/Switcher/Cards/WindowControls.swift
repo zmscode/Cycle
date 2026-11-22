@@ -9,7 +9,8 @@ struct WindowControls: View {
 	@State private var isHovering = false
 
 	var body: some View {
-		HStack(spacing: Theme.Controls.spacing) {
+		// The buttons' own padding spaces the dots; no extra gap, so their targets touch.
+		HStack(spacing: 0) {
 			ForEach(CardAction.trafficLights, id: \.self) { action in
 				TrafficLightButton(action: action, showsGlyph: isHovering, onAction: onAction)
 			}

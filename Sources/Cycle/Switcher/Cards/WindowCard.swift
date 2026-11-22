@@ -49,6 +49,7 @@ struct WindowCard: View {
 		.accessibilityElement(children: .contain)
 		.accessibilityLabel("\(window.appName), \(window.displayTitle)")
 		.accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+		.tilingAccessibilityActions(window.id, controller: controller)
 		.accessibilityAction(named: "Switch to Window", select)
 	}
 

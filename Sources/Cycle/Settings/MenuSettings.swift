@@ -123,6 +123,34 @@ final class MenuSettings {
 		}
 	}
 
+	var haptics = Settings.haptics {
+		didSet {
+			Settings.haptics = haptics
+			onChange?()
+		}
+	}
+
+	var tilingRightClickUndo = Settings.tilingRightClickUndo {
+		didSet {
+			Settings.tilingRightClickUndo = tilingRightClickUndo
+			onChange?()
+		}
+	}
+
+	var tilingRightClickMenu = Settings.tilingRightClickMenu {
+		didSet {
+			Settings.tilingRightClickMenu = tilingRightClickMenu
+			onChange?()
+		}
+	}
+
+	var tilingShowsNotes = Settings.tilingShowsNotes {
+		didSet {
+			Settings.tilingShowsNotes = tilingShowsNotes
+			onChange?()
+		}
+	}
+
 	var tilingWorkspaces = Settings.tilingWorkspaces {
 		didSet {
 			Settings.tilingWorkspaces = tilingWorkspaces
@@ -152,5 +180,9 @@ final class MenuSettings {
 		sync(\.tilingAnimates, Settings.tilingAnimates)
 		sync(\.tilingAnimationDuration, Settings.tilingAnimationDuration)
 		sync(\.tilingWorkspaces, Settings.tilingWorkspaces)
+		sync(\.haptics, Settings.haptics)
+		sync(\.tilingRightClickUndo, Settings.tilingRightClickUndo)
+		sync(\.tilingRightClickMenu, Settings.tilingRightClickMenu)
+		sync(\.tilingShowsNotes, Settings.tilingShowsNotes)
 	}
 }

@@ -54,8 +54,8 @@ struct PresetSlotTile: View {
 				.foregroundStyle(.white.opacity(0.9))
 			if isMain {
 				Text("MAIN")
-					.font(.system(size: 7, weight: .heavy))
-					.tracking(0.8)
+					.font(.system(size: 10, weight: .heavy))
+					.tracking(0.4)
 					.foregroundStyle(Theme.Colors.mark)
 			}
 		}

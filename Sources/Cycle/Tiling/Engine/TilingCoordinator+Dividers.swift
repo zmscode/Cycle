@@ -6,8 +6,9 @@ import RiftCore
 /// frontmost tiled window, so a window in front of the layout covers it, and it hides
 /// while the layout's windows aren't on screen (another Space, hidden, minimized).
 extension TilingCoordinator {
-	/// How wide a grip is when the gap is narrower (it then overlaps the windows a little).
-	private static let minimumGripThickness: CGFloat = 8
+	/// How wide a grip is when the gap is narrower (it then overlaps the windows a little),
+	/// so it's comfortable to grab.
+	private static let minimumGripThickness: CGFloat = 14
 
 	func setUpDividers() {
 		screenDividers.onBegin = { [weak self] item, pointer in

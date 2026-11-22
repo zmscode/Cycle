@@ -23,6 +23,16 @@ struct TilingOverlayView: View {
 			} else if let board = state.board {
 				TilingBoardCard(board: board, drag: nil, state: state)
 			}
+			if let evaporating = state.evaporating {
+				EvaporatingStack(
+					windows: evaporating.windowIDs.compactMap { id in
+						state.windows.first { $0.id == id }
+					},
+					images: state.images
+				)
+				.id(evaporating.serial)
+				.position(evaporating.point)
+			}
 		}
 		.frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 		.environment(\.colorScheme, .dark)

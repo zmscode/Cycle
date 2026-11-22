@@ -18,7 +18,7 @@ struct PresetStartChip: View {
 						RoundedRectangle(cornerRadius: 6)
 							.fill(.white.opacity(isHovered ? 0.14 : 0.06)))
 				Text(title)
-					.font(.system(size: 9, weight: .medium))
+					.font(.caption2.weight(.medium))
 					.foregroundStyle(isHovered ? .primary : .secondary)
 					.lineLimit(1)
 			}

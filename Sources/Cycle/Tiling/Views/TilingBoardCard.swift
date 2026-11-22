@@ -12,6 +12,7 @@ struct TilingBoardCard: View {
 	let state: SwitcherState
 
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
+	@Environment(\.colorSchemeContrast) private var contrast
 
 	private var placement: BoardPlacement { board.placement }
 
@@ -58,13 +59,16 @@ struct TilingBoardCard: View {
 		let shape = RoundedRectangle(cornerRadius: 3)
 		return shape
 			.fill(shown ? Theme.Colors.mark.opacity(0.55) : .white.opacity(0.1))
+			// The shown display has a heavier edge and number, not just a colour.
 			.strokeBorder(
-				hovered ? .white : shown ? Theme.Colors.mark : .white.opacity(0.25),
-				lineWidth: hovered ? 1.5 : 1
+				hovered ? .white : shown ? .white.opacity(0.9) : .white.opacity(0.3),
+				lineWidth: hovered || shown ? 2 : 1
 			)
 			.overlay {
 				Text(chip.number, format: .number)
-					.font(.system(size: 9, weight: .bold).monospacedDigit())
+					.font(
+						.system(size: 10, weight: shown ? .heavy : .medium).monospacedDigit()
+					)
 					.foregroundStyle(shown ? .white : .secondary)
 			}
 			.frame(width: chip.rect.width, height: chip.rect.height)
@@ -83,13 +87,14 @@ struct TilingBoardCard: View {
 
 	private var caption: String {
 		guard let drag else {
-			return "Drag a divider or a tile · right-click a tile for more"
+			let count = board.frames.count
+			return count == 1 ? "1 window tiled" : "\(count) windows tiled"
 		}
 		let count = drag.windowIDs.count
 		var text =
 			count > 1
 			? (drag.target == nil
-				? "Drag \(count) windows onto a preset" : "\(count) windows · \(action)")
+				? "\(count) windows" : "\(count) windows · \(action)")
 			: action
 		let displaced = drag.displaced
 		if displaced > 0 { text += " · \(displaced) left untiled" }
@@ -100,12 +105,10 @@ struct TilingBoardCard: View {
 	/// Where the drop goes, in words.
 	private var action: String {
 		switch drag?.target {
-		case nil where drag?.untiles == true: "Release to take it out of the layout"
-		case nil where drag?.fromBoard == true: "Drop on a tile or edge · off the board to untile"
-		case nil where drag?.hoveredDisplay != nil: "Switching display…"
-		case nil where !(drag?.board.placement.displays.isEmpty ?? true):
-			"Drop on the screen or a preset · rest on a display to switch"
-		case nil: "Drop on the screen or a preset"
+		case nil where drag?.untiles == true: "Remove from layout"
+		case nil where drag?.hoveredDisplay != nil:
+			displayName(drag?.hoveredDisplay) ?? "Another display"
+		case nil: drag.map { name(of: $0.windowID) } ?? ""
 		case .fill?: "Fill the screen"
 		case .edge(.left)?: "Full height on the left"
 		case .edge(.right)?: "Full height on the right"
@@ -123,6 +126,10 @@ struct TilingBoardCard: View {
 		}
 	}
 
+	private func displayName(_ display: String?) -> String? {
+		display.flatMap { NSScreen.screen(uuid: $0)?.localizedName }
+	}
+
 	private func name(of id: CGWindowID) -> String {
 		(state.windows.first { $0.id == id } ?? state.recentOrder.first { $0.id == id })?.appName
 			?? "this window"
@@ -135,8 +142,8 @@ struct TilingBoardCard: View {
 	private var screen: some View {
 		ZStack(alignment: .topLeading) {
 			RoundedRectangle(cornerRadius: Theme.Tiling.tileRadius + 2)
-				.fill(.black.opacity(0.35))
-				.strokeBorder(.white.opacity(0.12))
+				.fill(.black.opacity(contrast == .increased ? 0.6 : 0.35))
+				.strokeBorder(.white.opacity(contrast == .increased ? 0.5 : 0.12))
 			ForEach(sorted(shownFrames), id: \.key) { id, frame in
 				if let stand = standIn(for: id) {
 					tile(stand, frame: frame, role: .resting)
@@ -252,7 +259,7 @@ struct TilingBoardCard: View {
 				// Its keyboard shortcut: the modifier and this number.
 				if let index = placement.chips.firstIndex(where: { $0.id == chip.id }), index < 9 {
 					Text(index + 1, format: .number)
-						.font(.system(size: 8, weight: .bold).monospacedDigit())
+						.font(.system(size: 10, weight: .bold).monospacedDigit())
 						.foregroundStyle(.secondary)
 						.padding(3)
 						.accessibilityHidden(true)

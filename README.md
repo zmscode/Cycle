@@ -60,9 +60,9 @@ While you hover a preset chip, the board shows the whole layout that preset woul
 and the caption says if any tiled window would be left out. Over a target, the dragged
 window shrinks and moves to the lower right of the pointer so the spot stays in view.
 
-To tile several windows at once, mark each one first by right-clicking it or pressing Space.
-It gets a numbered badge. Right-click or press Space again to unmark it, or press Esc to
-clear them all. Dragging any marked window brings the others along. Dropped on a preset, they fill its slots in the order you
+To tile several windows at once, mark each one first by right-clicking it or pressing
+Space. It gets a numbered badge. Right-click or press Space again to unmark it, or press
+Esc to clear them all. Dragging any marked window brings the others along. Dropped on a preset, they fill its slots in the order you
 marked them, left to right and then top to bottom (window 1 on the left in Halves, window 2
 on the right), whichever window you grabbed; the chip lights the slots they'll take. Dropped on the screen or beside a tiled window, they go side by side (stacked
 along a side edge), sharing the space evenly.
@@ -100,9 +100,20 @@ double-click one to even them up. They sit just above the tiled windows, so a wi
 front covers them, and they hide while the tiled windows aren't on screen. The board has the
 same grips during a session. **Dividers** in settings turns the screen grips off.
 
-**Undo.** Right-click anywhere outside the switcher (on the desktop or another app's window)
-to undo the last tiling change: a drop, a preset, a divider drag. Each right-click undoes
-one more, up to 20. The click is caught, so the app underneath doesn't open a menu.
+**The tiling menu.** Option-right-click a card in the switcher, or right-click a tile on the
+board, for everything dragging does without a drag: **Mark for Tiling**, **Tile With ▸** (each preset on
+the board), **Move to Display ▸** (with more than one display), **Remove from Layout**, and
+**Undo**, then Minimize, Close Window and Quit. The session stays open while the menu is
+up. VoiceOver offers the same tiling actions on each card. **Right-Click Opens Menu** in
+settings swaps the two: a plain right-click opens the menu and Option-right-click marks.
+
+**Undo.** After each tiling change a note at the foot of the switcher names it, with an
+**Undo** button saying what it reverses ("Undo Thirds"). The note stays a few seconds
+(longer with VoiceOver, and as long as the pointer is on it), and VoiceOver reads it.
+Undo is also in the tiling menu, and goes back up to 100 changes. **Undo Notes** in
+settings turns the notes off (VoiceOver still announces each change). **Right-Click Outside
+Undoes** in settings brings back right-clicking outside the switcher to undo; it's off by
+default, so right-clicks reach the app underneath as usual.
 
 **Custom presets.** The New tile at the end of the presets grid opens the preset editor. It
 has a little screen you split and resize: hover a slot to split it side by side, split it
@@ -120,8 +131,7 @@ answers too slowly to animate smoothly snaps into place instead.
 **Rearranging on the board.** The board's tiles can be picked up during a session. Drop
 one on another tile's middle to swap them, on an edge to move it beside that tile, or along
 the screen's edge. Drag it off the board to take it out of the layout (it stays where it
-is). Right-click a tile for **Remove from Layout** and **Close Window**; right-clicks on the
-board don't undo.
+is). Right-click a tile for the tiling menu.
 
 **Rotating marked windows.** With several marked windows over a preset chip, the chip
 numbers the slots each will take. Scroll to rotate them through the slots (and, with more
@@ -142,11 +152,19 @@ to open a copy in the preset editor. Saving makes it a custom preset that takes 
 original's place on the board, ⌘ number included.
 
 **Workspaces.** The Workspaces tile in settings saves how every display is tiled now under
-a name, and puts it back with **Apply**: apps that aren't running are opened, and their
+a name (left blank, it's "Workspace 1", "Workspace 2" and so on), and puts it back with **Apply**: apps that aren't running are opened, and their
 windows are tiled as they appear (matched as remembered layouts are). A display that isn't
 connected is skipped. Each display it lays out is one undo step. `Cycle --workspace <name>`
 applies one from the command line, handing it to the copy of Cycle that's running.
 Workspaces are kept in `cycle.config` under `tiling.workspaces`.
+
+**Accessibility.** Cycle follows Reduce Motion, Reduce Transparency (its glass turns into
+an opaque background) and Increase Contrast (stronger edges and fills). Controls have
+targets of at least 20 points, and text is never below 10 points. A drop where nothing can
+land fades away instead of vanishing. The pointer shows a puff of smoke when letting go
+will untile a window, and "not allowed" over its own tile. Trackpad haptics confirm
+marking, display switches and slot rotation, and tick when a divider snaps to the middle;
+**Haptics** in settings turns them off.
 
 The Tiling tile in settings picks which presets the board shows, the main window's share
 in Main + Stack and Centre, and the gaps between windows and around the screen's edges
@@ -171,7 +189,8 @@ UserDefaults.
 		"layout": "grouped",
 		"modifier": "command",
 		"panelDelay": 0.12,
-		"showWindowlessApps": false
+		"showWindowlessApps": false,
+		"haptics": true
 	},
 	"tiling": {
 		"fillGaps": true,
@@ -184,7 +203,10 @@ UserDefaults.
 		"animate": true,
 		"animationDuration": 0.2,
 		"customPresets": [],
-		"workspaces": []
+		"workspaces": [],
+		"rightClickUndo": false,
+		"rightClickMenu": false,
+		"showNotes": true
 	}
 }
 ```

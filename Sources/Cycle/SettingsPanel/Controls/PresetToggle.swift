@@ -38,7 +38,7 @@ struct PresetToggle: View {
 					.overlay(alignment: .topTrailing) {
 						if let shortcut, !shortcut.isEmpty {
 							Text(shortcut)
-								.font(.system(size: 8, weight: .semibold).monospacedDigit())
+								.font(.system(size: 10, weight: .semibold).monospacedDigit())
 								.padding(.horizontal, 3)
 								.padding(.vertical, 1)
 								.background(.black.opacity(0.6), in: .capsule)
@@ -57,19 +57,34 @@ struct PresetToggle: View {
 			if let onEdit, isHovered {
 				Button(action: onEdit) {
 					Image(systemName: editIcon)
-						.font(.system(size: 8, weight: .bold))
+						.font(.system(size: 10, weight: .bold))
 						.foregroundStyle(.white)
-						.frame(width: 16, height: 16)
+						.frame(width: 18, height: 18)
 						.background(Theme.Colors.mark, in: Circle())
+						// The 20 pt minimum target, around the smaller circle.
+						.frame(width: 22, height: 22)
+						.contentShape(Circle())
 				}
 				.buttonStyle(.plain)
-				.offset(x: -2, y: -2)
+				.offset(x: -5, y: -5)
 				.help(editLabel)
 				.accessibilityLabel(editLabel)
 				.transition(.scale.combined(with: .opacity))
 			}
 		}
 		.onHover { hovering in withAnimation(.snappy(duration: 0.15)) { isHovered = hovering } }
+		// The hover button's actions, also from a right-click and VoiceOver.
+		.contextMenu {
+			Button(isOn ? "Hide from Board" : "Show on Board", action: toggle)
+			if let onEdit {
+				Button(preset.isCustom ? "Edit…" : "Adjust…", action: onEdit)
+			}
+		}
+		.accessibilityActions {
+			if let onEdit {
+				Button(editLabel, action: onEdit)
+			}
+		}
 		.sensoryFeedback(.selection, trigger: isOn)
 		.accessibilityLabel(preset.title)
 		.accessibilityValue(

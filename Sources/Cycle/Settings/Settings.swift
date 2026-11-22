@@ -44,6 +44,30 @@ enum Settings {
 		set { store.update { $0.switcher.panelDelay = newValue } }
 	}
 
+	/// Trackpad haptics.
+	static var haptics: Bool {
+		get { switcher.haptics }
+		set { store.update { $0.switcher.haptics = newValue } }
+	}
+
+	/// A right-click outside the switcher undoes the last tiling change.
+	static var tilingRightClickUndo: Bool {
+		get { tiling.rightClickUndo }
+		set { store.update { $0.tiling.rightClickUndo = newValue } }
+	}
+
+	/// A right-click on a card opens the tiling menu rather than marking the window.
+	static var tilingRightClickMenu: Bool {
+		get { tiling.rightClickMenu }
+		set { store.update { $0.tiling.rightClickMenu = newValue } }
+	}
+
+	/// A note with Undo after each tiling change.
+	static var tilingShowsNotes: Bool {
+		get { tiling.showNotes }
+		set { store.update { $0.tiling.showNotes = newValue } }
+	}
+
 	/// Space between tiled windows, in points.
 	static var tilingGap: Double {
 		get { max(tiling.gap, 0) }

@@ -14,6 +14,8 @@ struct SwitcherConfig: Codable, Equatable {
 	var showWindowlessApps = false
 	/// Seconds before the panel appears; a quicker tap-and-release switches without it.
 	var panelDelay = 0.12
+	/// Trackpad haptics (marking, snapping, switching the board's display).
+	var haptics = true
 
 	init() {}
 
@@ -29,5 +31,6 @@ struct SwitcherConfig: Codable, Equatable {
 		showWindowlessApps = container.value(
 			.showWindowlessApps, default: defaults.showWindowlessApps)
 		panelDelay = container.value(.panelDelay, default: defaults.panelDelay)
+		haptics = container.value(.haptics, default: defaults.haptics)
 	}
 }

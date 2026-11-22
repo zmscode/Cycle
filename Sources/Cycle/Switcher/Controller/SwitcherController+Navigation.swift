@@ -62,6 +62,7 @@ extension SwitcherController {
 			state.drag?.rotatesSlots == true
 			? { [weak self] delta in self?.state.drag?.slotOffset += delta }
 			: { [weak self] delta in self?.step(delta) }
+		let rotating = state.drag?.rotatesSlots == true
 		let continuous = event.getIntegerValueField(.scrollWheelEventIsContinuous) != 0
 		if continuous {
 			let momentum = event.getIntegerValueField(.scrollWheelEventMomentumPhase) != 0
@@ -74,7 +75,9 @@ extension SwitcherController {
 			while abs(scrollRemainder) >= scrollStepDistance {
 				advance(scrollRemainder > 0 ? -1 : 1)
 				scrollRemainder -= scrollRemainder > 0 ? scrollStepDistance : -scrollStepDistance
-				NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+				// Rotating slots is a discrete change worth feeling; stepping through windows
+				// happens too often for a tick each time.
+				if rotating { Haptics.confirm() }
 			}
 		} else {
 			let lines = event.getIntegerValueField(.scrollWheelEventDeltaAxis1)

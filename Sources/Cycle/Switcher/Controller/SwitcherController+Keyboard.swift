@@ -116,7 +116,7 @@ extension SwitcherController {
 	/// Releasing the modifier ends the session, switching to the highlighted window — a
 	/// filtered one included (not while settings are open, or in confirm mode).
 	var holdsOnModifier: Bool {
-		switchesOnRelease && state.drag == nil
+		switchesOnRelease && state.drag == nil && !isShowingMenu
 	}
 
 	/// The session ends when the modifier is let go (not in confirm mode or with settings

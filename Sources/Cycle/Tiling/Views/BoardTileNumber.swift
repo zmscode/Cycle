@@ -7,9 +7,9 @@ struct BoardTileNumber: View {
 
 	var body: some View {
 		Text(number, format: .number)
-			.font(.system(size: 9, weight: .bold).monospacedDigit())
+			.font(.system(size: 10, weight: .bold).monospacedDigit())
 			.foregroundStyle(.white)
-			.frame(minWidth: 14, minHeight: 14)
+			.frame(minWidth: 16, minHeight: 16)
 			.background(Theme.Colors.mark, in: Circle())
 			.accessibilityHidden(true)
 	}

@@ -14,7 +14,7 @@ final class DragTracker {
 	var onMove: (CGPoint) -> Void = { _ in }
 	var onEnd: () -> Void = {}
 	/// A right-click on the switcher panel.
-	var onRightClick: () -> Void = {}
+	var onRightClick: (NSEvent) -> Void = { _ in }
 	/// A new press: forget any click a previous drag left to be ignored.
 	var onPress: () -> Void = {}
 
@@ -51,7 +51,7 @@ final class DragTracker {
 		let location = NSEvent.mouseLocation
 		switch event.type {
 		case .rightMouseDown:
-			if !isDragging, isSwitcherWindow(event.window) { onRightClick() }
+			if !isDragging, isSwitcherWindow(event.window) { onRightClick(event) }
 		case .leftMouseDown:
 			reset()
 			onPress()

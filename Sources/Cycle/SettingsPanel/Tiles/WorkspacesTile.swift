@@ -43,7 +43,7 @@ struct WorkspacesTile: View {
 
 	private var saveRow: some View {
 		HStack(spacing: 6) {
-			TextField("Workspace name", text: $name)
+			TextField(defaultName, text: $name)
 				.textFieldStyle(.plain)
 				.font(.callout)
 				.focused($nameFocused)
@@ -56,8 +56,7 @@ struct WorkspacesTile: View {
 				}
 			Button("Save Current", action: save)
 				.buttonStyle(EditorButtonStyle())
-				.disabled(trimmedName.isEmpty)
-				.opacity(trimmedName.isEmpty ? 0.5 : 1)
+				.help("Save how every display is tiled now as “\(trimmedName.isEmpty ? defaultName : trimmedName)”")
 		}
 	}
 
@@ -65,10 +64,16 @@ struct WorkspacesTile: View {
 		name.trimmingCharacters(in: .whitespacesAndNewlines)
 	}
 
+	/// The name used when none is typed: "Workspace 1", "Workspace 2"…, the first free.
+	private var defaultName: String {
+		let taken = Set(settings.tilingWorkspaces.map { $0.name.lowercased() })
+		let number = (1...).first { !taken.contains("workspace \($0)") } ?? 1
+		return "Workspace \(number)"
+	}
+
 	/// Saves the current layouts; a workspace with the same name is replaced.
 	private func save() {
-		let name = trimmedName
-		guard !name.isEmpty else { return }
+		let name = trimmedName.isEmpty ? defaultName : trimmedName
 		guard var workspace = capture(name) else { return show("Nothing is tiled yet") }
 		var workspaces = settings.tilingWorkspaces
 		if let index = workspaces.firstIndex(where: {
@@ -95,13 +100,17 @@ struct WorkspacesTile: View {
 
 	private func delete(_ workspace: Workspace) {
 		settings.tilingWorkspaces.removeAll { $0.id == workspace.id }
+		show("Deleted \(workspace.name)")
 	}
 
+	/// Shows what happened until the next action, and has VoiceOver read it.
 	private func show(_ text: String) {
 		withAnimation { note = text }
-		DispatchQueue.main.asyncAfter(deadline: .now() + 2.5) {
-			guard note == text else { return }
-			withAnimation { note = nil }
-		}
+		NSAccessibility.post(
+			element: NSApp as Any, notification: .announcementRequested,
+			userInfo: [
+				.announcement: text,
+				.priority: NSAccessibilityPriorityLevel.high.rawValue,
+			])
 	}
 }

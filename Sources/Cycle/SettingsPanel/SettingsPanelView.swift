@@ -71,6 +71,24 @@ struct SettingsPanelView: View {
 							title: "Animate", subtitle: "Windows",
 							systemImage: "wind", isOn: $settings.tilingAnimates)
 					}
+					GridRow {
+						ToggleTile(
+							title: "Right-Click", subtitle: "Opens Menu",
+							systemImage: "contextualmenu.and.cursorarrow",
+							isOn: $settings.tilingRightClickMenu)
+						ToggleTile(
+							title: "Right-Click", subtitle: "Outside Undoes",
+							systemImage: "arrow.uturn.backward",
+							isOn: $settings.tilingRightClickUndo)
+					}
+					GridRow {
+						ToggleTile(
+							title: "Undo Notes", subtitle: "After Tiling",
+							systemImage: "text.bubble", isOn: $settings.tilingShowsNotes)
+						ToggleTile(
+							title: "Haptics", subtitle: "Trackpad",
+							systemImage: "hand.tap", isOn: $settings.haptics)
+					}
 				}
 				WorkspacesTile(
 					settings: settings, capture: captureWorkspace, apply: applyWorkspace)

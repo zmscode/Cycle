@@ -54,6 +54,7 @@ struct GroupWindowTile: View {
 		.accessibilityElement(children: .contain)
 		.accessibilityLabel("\(window.appName), \(window.displayTitle)")
 		.accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+		.tilingAccessibilityActions(window.id, controller: controller)
 	}
 
 	private func perform(_ action: CardAction) {
