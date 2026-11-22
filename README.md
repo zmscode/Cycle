@@ -238,9 +238,8 @@ Without [`just`](https://github.com/casey/just), the `Makefile` has the same tas
 make run
 ```
 
-`make help` lists them. Options are variables: `make build CONFIG=debug` builds a debug copy,
-and `make icon NAME=cycle-panes` picks the icon. `make release` does the same as
-`just release`.
+`make help` lists them. Options are variables: `make build CONFIG=debug` builds a debug copy.
+`make release` does the same as `just release`.
 
 Cycle needs **Accessibility** (for the keyboard tap and window control) and **Screen Recording**
 (for thumbnails and titles). On launch, if either is missing, Cycle opens a setup window and
@@ -285,11 +284,9 @@ Bump `VERSION`, commit, then `just release`: it builds and zips the app, publish
 [zmscode/homebrew-cycle](https://github.com/zmscode/homebrew-cycle) with the new version and
 checksum. `Casks/cycle.rb` here is the template it fills in.
 
-## Icons
+## Icon
 
-The icon's SVG sources are no longer in the repository; `Support/AppIcon.icns` is the app
-icon. To change it, put an SVG in `Support/Icons` and run `just icon <name>`, which rebuilds
-`Support/AppIcon.icns` from it.
+The app icon is `Support/AppIcon.icns`.
 
 `open build/Cycle.app --args --setup` shows the setup window even when everything is granted.
 `Cycle --dump` prints the window list a session would show.

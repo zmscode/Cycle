@@ -1,5 +1,5 @@
 # Cycle — common tasks, a make alternative to the justfile. `make help` lists them.
-# Pass options as variables: `make build CONFIG=debug`, `make icon NAME=cycle-panes`.
+# Pass options as variables: `make build CONFIG=debug`.
 # Written for the GNU Make 3.81 that ships with macOS: each recipe is one shell script.
 
 SHELL := /bin/bash
@@ -15,7 +15,7 @@ CONFIG ?= release
 NAME ?= cycle-minimal
 ZIP := build/Cycle-$(VERSION).zip
 
-.PHONY: help build b run r reset-permissions icon package release
+.PHONY: help build b run r reset-permissions package release
 
 help: ## List the tasks
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
@@ -58,21 +58,6 @@ r: run
 reset-permissions: ## Reset Cycle's Accessibility and Screen Recording grants
 	-tccutil reset Accessibility $(BUNDLE_ID)
 	-tccutil reset ScreenCapture $(BUNDLE_ID)
-
-icon: ## Rebuild Support/AppIcon.icns from Support/Icons/<NAME>.svg (NAME=cycle-minimal)
-	@set -euo pipefail; \
-	tmp=$$(mktemp -d); \
-	mkdir -p "$$tmp/AppIcon.iconset"; \
-	qlmanage -t -s 1024 -o "$$tmp" "Support/Icons/$(NAME).svg" >/dev/null 2>&1; \
-	src="$$tmp/$(NAME).svg.png"; \
-	for sz in 16 32 128 256 512; do \
-		sips -z $$sz $$sz "$$src" --out "$$tmp/AppIcon.iconset/icon_$${sz}x$${sz}.png" >/dev/null; \
-		d=$$((sz * 2)); \
-		sips -z $$d $$d "$$src" --out "$$tmp/AppIcon.iconset/icon_$${sz}x$${sz}@2x.png" >/dev/null; \
-	done; \
-	iconutil -c icns "$$tmp/AppIcon.iconset" -o Support/AppIcon.icns; \
-	echo "Wrote Support/AppIcon.icns from $(NAME)"; \
-	rm -rf "$$tmp"
 
 package: build ## Zip the app as build/Cycle-<version>.zip and print its SHA-256
 	@rm -f "$(ZIP)"

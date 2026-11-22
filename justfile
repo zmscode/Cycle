@@ -55,22 +55,6 @@ reset-permissions:
     -tccutil reset Accessibility {{ bundle_id }}
     -tccutil reset ScreenCapture {{ bundle_id }}
 
-# Rebuild Support/AppIcon.icns from an SVG in Support/Icons (default: cycle-minimal)
-icon name="cycle-minimal":
-    #!/usr/bin/env fish
-    set -l tmp (mktemp -d)
-    mkdir -p $tmp/AppIcon.iconset
-    # Quick Look renders SVG without extra tools.
-    qlmanage -t -s 1024 -o $tmp "Support/Icons/{{ name }}.svg" >/dev/null 2>&1; or exit 1
-    set -l src $tmp/{{ name }}.svg.png
-    for sz in 16 32 128 256 512
-        sips -z $sz $sz $src --out $tmp/AppIcon.iconset/icon_{$sz}x{$sz}.png >/dev/null
-        set -l d (math $sz \* 2)
-        sips -z $d $d $src --out $tmp/AppIcon.iconset/icon_{$sz}x{$sz}@2x.png >/dev/null
-    end
-    iconutil -c icns $tmp/AppIcon.iconset -o Support/AppIcon.icns; and echo "Wrote Support/AppIcon.icns from {{ name }}"
-    rm -rf $tmp
-
 # Zip build/Cycle.app as build/Cycle-<version>.zip and print its SHA-256
 package: build
     #!/usr/bin/env fish
