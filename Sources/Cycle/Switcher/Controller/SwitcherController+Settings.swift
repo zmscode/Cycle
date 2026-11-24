@@ -1,8 +1,9 @@
 import AppKit
 
-/// The settings panel under the gear, and redrawing when a setting changes.
+/// The settings panel beside the switcher (opened by the gear), and redrawing when a
+/// setting changes.
 extension SwitcherController {
-	/// Opens or closes the settings panel under the gear. While open it holds the session,
+	/// Opens or closes the settings panel beside the switcher. While open it holds the session,
 	/// so the modifier can be let go to use it.
 	func toggleSettings() {
 		if state.isShowingSettings { return closeSettings() }
@@ -23,29 +24,19 @@ extension SwitcherController {
 		if state.board != nil { showBoardTiles() }
 	}
 
-	/// Just below the gear, right-aligned with it, unless that would cover the switcher:
-	/// then beside the panel (left, else right), else below it.
+	/// Beside the switcher's left edge, centred on it vertically; on its right when
+	/// there's no room on the left. A panel taller than the screen allows scrolls.
 	func settingsAnchor(in frame: CGRect) -> CGPoint {
-		let size = settingsPanel.size
 		let gap: CGFloat = 12
-		let visible = SwitcherPanel.screenUnderPointer().visibleFrame
-		if let gear = panel.gearFrame {
-			let topLeft = CGPoint(x: gear.maxX - size.width, y: gear.minY - gap)
-			let rect = CGRect(
-				x: topLeft.x, y: topLeft.y - size.height, width: size.width, height: size.height)
-			if !rect.intersects(frame.insetBy(dx: -gap, dy: -gap)), rect.minY >= visible.minY {
-				return topLeft
-			}
-		}
-		if frame.minX - gap - size.width >= visible.minX {
-			return CGPoint(x: frame.minX - gap - size.width, y: frame.maxY)
-		}
-		if frame.maxX + gap + size.width <= visible.maxX {
-			return CGPoint(x: frame.maxX + gap, y: frame.maxY)
-		}
-		let x = min(max(frame.minX, visible.minX), visible.maxX - size.width)
-		let y = max(frame.minY - gap, visible.minY + size.height)
-		return CGPoint(x: x, y: y)
+		let screen = panel.screen ?? SwitcherPanel.screenUnderPointer()
+		let visible = screen.visibleFrame.insetBy(dx: gap, dy: gap)
+		let size = settingsPanel.prepare(maxHeight: visible.height)
+		let height = min(size.height, visible.height)
+		var x = frame.minX - gap - size.width
+		if x < visible.minX { x = min(frame.maxX + gap, visible.maxX - size.width) }
+		// Centred on the switcher, kept on screen.
+		let top = min(max(frame.midY + height / 2, visible.minY + height), visible.maxY)
+		return CGPoint(x: x, y: top)
 	}
 
 	/// A setting changed in the panel: redraw an open switcher in the new arrangement.

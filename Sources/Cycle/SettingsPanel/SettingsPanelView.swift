@@ -18,12 +18,29 @@ struct SettingsPanelView: View {
 	/// The content changed height; the panel fits itself to it.
 	let onResize: () -> Void
 	let onQuit: () -> Void
+	/// How tall the panel may be on its screen; the tiles scroll past that.
+	let sizing: SettingsPanelSizing
 
 	var body: some View {
 		VStack(spacing: 0) {
 			SettingsPanelHeader(onOpenConfig: onOpenConfig, onQuit: onQuit)
 			Divider()
 				.padding(.horizontal, Theme.Panel.padding)
+			ScrollView(.vertical) {
+				tiles
+			}
+			.scrollBounceBehavior(.basedOnSize)
+			// As tall as the tiles, until the screen runs out.
+			.frame(maxHeight: max(sizing.maxHeight - Self.headerAllowance, 200))
+		}
+		.frame(width: ControlTileMetrics.panelWidth)
+		.glassSheet()
+	}
+
+	/// Room for the header and divider above the scrolling tiles.
+	private static let headerAllowance: CGFloat = 64
+
+	private var tiles: some View {
 			VStack(spacing: ControlTileMetrics.spacing) {
 				LayoutTile(selection: $settings.layout)
 				ShortcutTile(modifier: $settings.modifier)
@@ -106,8 +123,5 @@ struct SettingsPanelView: View {
 					onSetup: onSetup)
 			}
 			.padding(ControlTileMetrics.sheetPadding)
-		}
-		.frame(width: ControlTileMetrics.panelWidth)
-		.glassSheet()
 	}
 }

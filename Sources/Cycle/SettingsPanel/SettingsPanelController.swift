@@ -9,6 +9,7 @@ import SwiftUI
 @MainActor
 final class SettingsPanelController {
 	let settings = MenuSettings()
+	private let sizing = SettingsPanelSizing()
 	private let tapIsRunning: () -> Bool
 	private var panel: NSPanel?
 	/// Set for the standalone panel, which closes on a click elsewhere or Escape. In a
@@ -29,12 +30,22 @@ final class SettingsPanelController {
 	/// The panel's size at its content's natural height.
 	var size: CGSize { preparedPanel().frame.size }
 
+	/// The panel's size when it may be at most `maxHeight` tall (it scrolls past that).
+	func prepare(maxHeight: CGFloat) -> CGSize {
+		sizing.maxHeight = maxHeight
+		return preparedPanel().frame.size
+	}
+
 	init(tapIsRunning: @escaping () -> Bool) {
 		self.tapIsRunning = tapIsRunning
 	}
 
 	/// Opens with its top-left corner at `topLeft` (screen coordinates), beside the switcher.
 	func show(topLeft: CGPoint) {
+		// Never past the bottom of the screen: the tiles scroll instead.
+		let visible = (NSScreen.screens.first { $0.frame.contains(topLeft) } ?? NSScreen.main)?
+			.visibleFrame ?? .zero
+		sizing.maxHeight = min(sizing.maxHeight, topLeft.y - visible.minY - Self.screenMargin)
 		let panel = preparedPanel()
 		panel.setFrameTopLeftPoint(topLeft)
 		fadeIn(panel)
@@ -42,8 +53,17 @@ final class SettingsPanelController {
 
 	/// Opens by itself, centred on the screen under the pointer.
 	func showStandalone() {
-		let panel = preparedPanel()
 		let visible = SwitcherPanel.screenUnderPointer().visibleFrame
+		sizing.maxHeight = visible.height - Self.screenMargin * 4
+		#if DEBUG
+			// For checking the scrolling layout on a big screen.
+			if let cap = ProcessInfo.processInfo.environment["CYCLE_SETTINGS_MAX_HEIGHT"]
+				.flatMap(Double.init)
+			{
+				sizing.maxHeight = cap
+			}
+		#endif
+		let panel = preparedPanel()
 		panel.setFrameOrigin(
 			CGPoint(
 				x: visible.midX - panel.frame.width / 2,
@@ -77,6 +97,9 @@ final class SettingsPanelController {
 			panel.orderOut(nil)
 		}
 	}
+
+	/// Space kept between the panel and the screen's edge.
+	private static let screenMargin: CGFloat = 12
 
 	private func preparedPanel() -> NSPanel {
 		Permissions.shared.refresh()
@@ -126,7 +149,8 @@ final class SettingsPanelController {
 			captureWorkspace: { [weak self] name in self?.captureWorkspace(name) },
 			applyWorkspace: { [weak self] workspace in self?.applyWorkspace(workspace) ?? 0 },
 			onResize: { [weak self] in self?.fitToContent() },
-			onQuit: { NSApp.terminate(nil) })
+			onQuit: { NSApp.terminate(nil) },
+			sizing: sizing)
 		let host = NSHostingView(rootView: view)
 		host.sizingOptions = [.intrinsicContentSize]
 		panel.contentView = host
