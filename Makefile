@@ -29,6 +29,7 @@ build: ## Build build/Cycle.app (CONFIG=release by default; CONFIG=debug for deb
 	cp "$$bin/Cycle" "$(APP)/Contents/MacOS/Cycle"; \
 	cp Support/Info.plist "$(APP)/Contents/Info.plist"; \
 	cp Support/AppIcon.icns "$(APP)/Contents/Resources/"; \
+	install -m 755 Support/cycle "$(APP)/Contents/Resources/cycle"; \
 	build_number=$$(git rev-list --count HEAD 2>/dev/null || echo 1); \
 	/usr/libexec/PlistBuddy \
 		-c "Set :CFBundleShortVersionString $(VERSION)" \

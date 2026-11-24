@@ -1,0 +1,57 @@
+#!/bin/sh
+# cycle: Cycle's command line. Homebrew links it into your PATH from inside Cycle.app.
+#
+#   cycle                     open Cycle (or show its settings if it's already running)
+#   cycle --settings          open Cycle with its settings showing
+#   cycle --workspace <name>  apply a saved workspace
+#   cycle --version           print Cycle's version
+#   cycle --help              print this help
+
+# This script lives in Cycle.app/Contents/Resources; find the app from its real path
+# (Homebrew runs it through a symlink).
+script=$(realpath "$0" 2>/dev/null || echo "$0")
+app=$(cd "$(dirname "$script")/../.." && pwd)
+binary="$app/Contents/MacOS/Cycle"
+
+usage() {
+	sed -n '4,8s/^# //p' "$script"
+}
+
+# Whether Cycle is running (it's then told what to do, rather than started again).
+running() {
+	pgrep -xq Cycle
+}
+
+case "$1" in
+	-h | --help | help)
+		echo "usage: cycle [--settings | --workspace <name> | --version | --help]"
+		echo
+		usage
+		;;
+	-v | --version | version)
+		/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" \
+			"$app/Contents/Info.plist"
+		;;
+	"")
+		open "$app"
+		;;
+	--settings | settings)
+		if running; then "$binary" --settings; else open "$app" --args --settings; fi
+		;;
+	--workspace | workspace)
+		if [ -z "$2" ]; then
+			echo "cycle: --workspace needs a name" >&2
+			exit 64
+		fi
+		if running; then
+			"$binary" --workspace "$2"
+		else
+			open "$app" --args --workspace "$2"
+		fi
+		;;
+	*)
+		echo "cycle: unknown option $1" >&2
+		echo "usage: cycle [--settings | --workspace <name> | --version | --help]" >&2
+		exit 64
+		;;
+esac

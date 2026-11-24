@@ -44,6 +44,7 @@ extension SwitcherController {
 	func settingsChanged() {
 		tiling.settingsChanged()
 		retileIfSpacingChanged()
+		menuBarItem.update()
 		guard phase == .active else { return }
 		// Previews turned on or off mid-session: capture now, or drop the pictures.
 		if Settings.showPreviews {

@@ -130,6 +130,13 @@ final class MenuSettings {
 		}
 	}
 
+	var showMenuBarIcon = Settings.showMenuBarIcon {
+		didSet {
+			Settings.showMenuBarIcon = showMenuBarIcon
+			onChange?()
+		}
+	}
+
 	var haptics = Settings.haptics {
 		didSet {
 			Settings.haptics = haptics
@@ -189,6 +196,7 @@ final class MenuSettings {
 		sync(\.tilingWorkspaces, Settings.tilingWorkspaces)
 		sync(\.haptics, Settings.haptics)
 		sync(\.showPreviews, Settings.showPreviews)
+		sync(\.showMenuBarIcon, Settings.showMenuBarIcon)
 		sync(\.tilingRightClickUndo, Settings.tilingRightClickUndo)
 		sync(\.tilingRightClickMenu, Settings.tilingRightClickMenu)
 		sync(\.tilingShowsNotes, Settings.tilingShowsNotes)

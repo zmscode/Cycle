@@ -85,6 +85,10 @@ final class SwitcherController {
 	var retileWork: DispatchWorkItem?
 	/// The card under the pointer, whether or not hovering has selected it.
 	var pointerWindowID: CGWindowID?
+	/// The menu bar icon, while it's turned on.
+	private(set) lazy var menuBarItem = MenuBarItem(
+		openSettings: { [weak self] in self?.settingsPanel.showStandalone() },
+		applyWorkspace: { [weak self] workspace in self?.tiling.apply(workspace) })
 	/// A context menu is open: the session stays open until it closes.
 	var isShowingMenu = false
 	/// Counts notes shown, so a note's timer only dismisses that note.
@@ -116,7 +120,8 @@ final class SwitcherController {
 		setUpDragTracker()
 		setUpBoard()
 		setUpBoardTiles()
-		listenForWorkspaceRequests()
+		listenForRemoteRequests()
+		menuBarItem.update()
 		tap.handler = { [weak self] type, event in
 			// The tap runs on the main run loop.
 			MainActor.assumeIsolated { self?.handle(type, event) ?? false }

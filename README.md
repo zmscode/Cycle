@@ -14,6 +14,23 @@ System Settings > Privacy & Security > Open Anyway, or run
 `xattr -dr com.apple.quarantine /Applications/Cycle.app`. It needs macOS 26 or later on Apple
 silicon.
 
+The cask also installs a `cycle` command:
+
+```bash
+cycle --settings
+```
+
+| Command | What it does |
+|---|---|
+| `cycle` | Opens Cycle (or shows its settings if it's already running) |
+| `cycle --settings` | Opens Cycle with its settings showing |
+| `cycle --workspace <name>` | Applies a saved workspace |
+| `cycle --version` | Prints Cycle's version |
+| `cycle --help` | Lists these |
+
+With Cycle running, the command hands the request to it; otherwise it starts Cycle and
+does it once Cycle is up.
+
 ## Use
 
 | Key           | Does                                                            |
@@ -160,8 +177,8 @@ original's place on the board, ⌘ number included.
 **Workspaces.** The Workspaces tile in settings saves how every display is tiled now under
 a name (left blank, it's "Workspace 1", "Workspace 2" and so on), and puts it back with **Apply**: apps that aren't running are opened, and their
 windows are tiled as they appear (matched as remembered layouts are). A display that isn't
-connected is skipped. Each display it lays out is one undo step. `Cycle --workspace <name>`
-applies one from the command line, handing it to the copy of Cycle that's running.
+connected is skipped. Each display it lays out is one undo step. `cycle --workspace <name>`
+applies one from the command line.
 Workspaces are kept in `cycle.config` under `tiling.workspaces`.
 
 **Accessibility.** Cycle follows Reduce Motion, Reduce Transparency (its glass turns into
@@ -197,7 +214,8 @@ UserDefaults.
 		"panelDelay": 0.12,
 		"showWindowlessApps": false,
 		"haptics": true,
-		"showPreviews": true
+		"showPreviews": true,
+		"showMenuBarIcon": true
 	},
 	"tiling": {
 		"fillGaps": true,
@@ -224,8 +242,9 @@ UserDefaults.
 of any custom preset. A custom preset is `{ "id": "custom-…", "name": "…", "layout": <Rift
 tree> }`, where the tree's panes are slot numbers from 0.
 
-There's no menu-bar item. Settings are behind the round gear just left of the switcher,
-centred on it, while the switcher is open. They open to the left of the gear, centred on
+Cycle has a menu bar icon with **Settings…**, **Apply Workspace ▸**, **Open cycle.config**
+and **Quit Cycle**; **Menu Bar Icon** in settings turns it off. Settings are also behind the
+round gear just left of the switcher, centred on it, while the switcher is open. They open to the left of the gear, centred on
 the switcher (on its right if there's no room), and scroll when they're taller than the
 screen. They
 keep the switcher open until Return, a click or Escape; Escape closes settings first. Or

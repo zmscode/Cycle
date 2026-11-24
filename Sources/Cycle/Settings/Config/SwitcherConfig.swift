@@ -17,6 +17,8 @@ struct SwitcherConfig: Codable, Equatable {
 	/// Window previews (thumbnails). Off: cards show app icons, nothing is captured, and
 	/// Screen Recording isn't needed.
 	var showPreviews = true
+	/// An icon in the menu bar with Cycle's menu (settings, workspaces, quit).
+	var showMenuBarIcon = true
 	/// Trackpad haptics (marking, snapping, switching the board's display).
 	var haptics = true
 
@@ -36,5 +38,6 @@ struct SwitcherConfig: Codable, Equatable {
 		panelDelay = container.value(.panelDelay, default: defaults.panelDelay)
 		haptics = container.value(.haptics, default: defaults.haptics)
 		showPreviews = container.value(.showPreviews, default: defaults.showPreviews)
+		showMenuBarIcon = container.value(.showMenuBarIcon, default: defaults.showMenuBarIcon)
 	}
 }

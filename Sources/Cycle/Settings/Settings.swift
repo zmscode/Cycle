@@ -53,6 +53,12 @@ enum Settings {
 		set { store.update { $0.switcher.showPreviews = newValue } }
 	}
 
+	/// An icon in the menu bar with Cycle's menu.
+	static var showMenuBarIcon: Bool {
+		get { switcher.showMenuBarIcon }
+		set { store.update { $0.switcher.showMenuBarIcon = newValue } }
+	}
+
 	/// Trackpad haptics.
 	static var haptics: Bool {
 		get { switcher.haptics }

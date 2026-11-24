@@ -69,7 +69,9 @@ struct SettingsPanelView: View {
 							title: "Previews",
 							subtitle: settings.showPreviews ? "Window Pictures" : "Icons Only",
 							systemImage: "photo.on.rectangle", isOn: $settings.showPreviews)
-							.gridCellColumns(2)
+						ToggleTile(
+							title: "Menu Bar", subtitle: "Icon",
+							systemImage: "menubar.rectangle", isOn: $settings.showMenuBarIcon)
 					}
 				}
 				TilingTile(settings: settings, currentLayout: currentLayout, onResize: onResize)

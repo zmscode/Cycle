@@ -1,16 +1,18 @@
 import AppKit
 
-/// `Cycle --workspace <name>` from the command line: a second copy of Cycle hands the
-/// name to the one running and exits; the running one applies it.
+/// Requests from the `cycle` command line, handed over by a second copy of Cycle (see
+/// `RemoteRequest`): apply a workspace, open settings.
 extension SwitcherController {
-	nonisolated static let workspaceRequest = Notification.Name("com.zms.Cycle.applyWorkspace")
-
-	func listenForWorkspaceRequests() {
-		DistributedNotificationCenter.default().addObserver(
-			forName: Self.workspaceRequest, object: nil, queue: .main
-		) { [weak self] note in
+	func listenForRemoteRequests() {
+		let center = DistributedNotificationCenter.default()
+		center.addObserver(forName: RemoteRequest.applyWorkspace, object: nil, queue: .main) {
+			[weak self] note in
 			guard let name = note.object as? String else { return }
 			MainActor.assumeIsolated { self?.applyWorkspace(named: name) }
+		}
+		center.addObserver(forName: RemoteRequest.openSettings, object: nil, queue: .main) {
+			[weak self] _ in
+			MainActor.assumeIsolated { self?.settingsPanel.showStandalone() }
 		}
 	}
 

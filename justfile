@@ -25,6 +25,8 @@ build config="release":
     cp "$bin/Cycle" "{{ app }}/Contents/MacOS/Cycle"
     cp Support/Info.plist "{{ app }}/Contents/Info.plist"
     cp Support/AppIcon.icns "{{ app }}/Contents/Resources/"
+    # The `cycle` command; the cask links it into the PATH.
+    install -m 755 Support/cycle "{{ app }}/Contents/Resources/cycle"
     # The version from VERSION; the build number counts commits.
     set -l build_number (git rev-list --count HEAD 2>/dev/null; or echo 1)
     /usr/libexec/PlistBuddy \

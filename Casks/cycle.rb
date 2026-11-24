@@ -16,6 +16,7 @@ cask "cycle" do
   depends_on macos: :tahoe
 
   app "Cycle.app"
+  binary "#{appdir}/Cycle.app/Contents/Resources/cycle"
 
   uninstall quit: "com.zms.Cycle"
 
