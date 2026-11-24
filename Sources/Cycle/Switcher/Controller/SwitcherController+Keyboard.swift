@@ -104,6 +104,14 @@ extension SwitcherController {
 
 		case .scrollWheel:
 			guard ownsKeyboard else { return false }
+			// Over a list too long for the panel, the wheel scrolls the list itself (so the
+			// window wanted can be found and clicked), unless it's rotating dragged windows
+			// through a preset's slots.
+			if state.drag?.rotatesSlots != true, panel.contentScrolls,
+				let frame = panelFrame, frame.contains(Self.appKitPoint(event.location))
+			{
+				return false
+			}
 			scrolled(event)
 			// Swallowed, so the window underneath doesn't scroll as well.
 			return true
@@ -137,6 +145,12 @@ extension SwitcherController {
 			$0 != modifier.flag
 		}
 		return others.allSatisfy { !flags.contains($0) }
+	}
+
+	/// A window-server point (top-left of the main screen, y down) in AppKit coordinates.
+	static func appKitPoint(_ point: CGPoint) -> CGPoint {
+		let height = NSScreen.screens.first?.frame.height ?? 0
+		return CGPoint(x: point.x, y: height - point.y)
 	}
 
 	static func typedText(_ event: CGEvent) -> String? {

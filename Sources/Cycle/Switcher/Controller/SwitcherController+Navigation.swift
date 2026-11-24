@@ -52,7 +52,8 @@ extension SwitcherController {
 	}
 
 	/// The scroll wheel steps through windows: down (or right) for the next one, up (or
-	/// left) for the previous, wrapping like Tab. A mouse wheel moves one window per notch.
+	/// left) for the previous, wrapping like Tab. A mouse wheel moves one window per notch,
+	/// and no faster than one per `wheelStepInterval`.
 	/// Trackpad scrolling moves one per `scrollStepDistance` points with a light haptic
 	/// tick per step; momentum keeps going at `momentumWeight`, so flicks glide.
 	func scrolled(_ event: CGEvent) {
@@ -83,6 +84,9 @@ extension SwitcherController {
 			let lines = event.getIntegerValueField(.scrollWheelEventDeltaAxis1)
 			guard lines != 0 else { return }
 			scrollRemainder = 0
+			let now = Date()
+			guard now.timeIntervalSince(lastWheelStep) >= wheelStepInterval else { return }
+			lastWheelStep = now
 			advance(lines > 0 ? -1 : 1)
 		}
 	}

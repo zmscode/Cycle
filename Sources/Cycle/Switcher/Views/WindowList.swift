@@ -45,10 +45,12 @@ struct WindowList: View {
 		.frame(width: metrics.bodySize.width, height: metrics.bodySize.height)
 	}
 
+	/// Brings the selection into view, moving only as far as needed: a card picked by
+	/// hovering is already in view, so the list doesn't jump under the pointer.
 	private func scroll(_ proxy: ScrollViewProxy, to id: CGWindowID?) {
 		guard metrics.scrolls, let id else { return }
 		withAnimation(reduceMotion ? nil : Theme.Motion.selection) {
-			proxy.scrollTo(id, anchor: .center)
+			proxy.scrollTo(id)
 		}
 	}
 }

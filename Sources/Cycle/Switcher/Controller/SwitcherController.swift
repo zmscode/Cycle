@@ -40,9 +40,12 @@ final class SwitcherController {
 	/// Trackpad scrolling accumulated toward the next step.
 	var scrollRemainder: CGFloat = 0
 	/// Points of trackpad scroll per window step; momentum after lifting the fingers
-	/// counts for half, so a flick glides to a stop instead of racing ahead.
-	let scrollStepDistance: CGFloat = 20
-	let momentumWeight: CGFloat = 0.5
+	/// counts for less than a fifth, so a flick glides to a stop instead of racing ahead.
+	let scrollStepDistance: CGFloat = 60
+	let momentumWeight: CGFloat = 0.15
+	/// A mouse wheel moves at most one window per this long, so a quick spin doesn't skip.
+	let wheelStepInterval: TimeInterval = 0.11
+	var lastWheelStep = Date.distantPast
 	var startBackward = false
 	/// The modifier was released (or Return pressed) while loading: switch on arrival.
 	var commitWhenLoaded = false

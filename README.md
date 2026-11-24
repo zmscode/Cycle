@@ -38,7 +38,7 @@ does it once Cycle is up.
 | ⌘Tab (hold ⌘) | open; Tab / Shift-Tab step through windows; release ⌘ to switch |
 | ← →           | move along the current row                                      |
 | ↑ ↓           | move to the row above or below                                  |
-| scroll        | next / previous window                                          |
+| scroll        | next / previous window (over a list too long to fit: scroll it) |
 | type          | filter by app or window name (release ⌘ to switch to the match) |
 | ⌘`            | next window of the highlighted app                              |
 | Space         | mark the highlighted window for tiling (before typing a filter) |

@@ -48,6 +48,9 @@ final class SwitcherPanel {
 	/// The layout last drawn, so arrow keys move through what's on screen.
 	private var metrics: SwitcherLayout?
 
+	/// Whether the windows overflow the panel, so its content scrolls.
+	var contentScrolls: Bool { metrics?.scrolls ?? false }
+
 	/// Windows by visual row for arrow-key movement. Before the panel has been drawn (a
 	/// quick tap) it measures the layout it would draw.
 	func navigationRows() -> [[NavigationStop]] {
