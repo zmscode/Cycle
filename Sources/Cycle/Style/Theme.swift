@@ -73,12 +73,11 @@ enum Theme {
 		static let iconTileWidth: CGFloat = 224
 	}
 
-	/// The floating settings button in the screen's top-right corner.
+	/// The floating settings button, just left of the switcher.
 	enum Gear {
 		static let diameter: CGFloat = 40
+		/// Space between the button and the switcher's left edge.
 		static let gap: CGFloat = 10
-		/// Inset from the screen's top-right corner.
-		static let margin: CGFloat = 16
 	}
 
 	/// Drag-to-tile: the board under the switcher and the frames it gives windows.

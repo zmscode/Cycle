@@ -224,9 +224,10 @@ UserDefaults.
 of any custom preset. A custom preset is `{ "id": "custom-…", "name": "…", "layout": <Rift
 tree> }`, where the tree's panes are slot numbers from 0.
 
-There's no menu-bar item. Settings are behind the round gear in the top-right corner of the
-screen while the switcher is open. They open beside the switcher's left edge, centred on
-it (on its right if there's no room), and scroll when they're taller than the screen. They
+There's no menu-bar item. Settings are behind the round gear just left of the switcher,
+centred on it, while the switcher is open. They open to the left of the gear, centred on
+the switcher (on its right if there's no room), and scroll when they're taller than the
+screen. They
 keep the switcher open until Return, a click or Escape; Escape closes settings first. Or
 open Cycle again from Finder or Spotlight.
 They cover the layout, the modifier (⌘, ⌥ or ⌃), whether the switcher stays open until

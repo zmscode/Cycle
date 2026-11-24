@@ -24,15 +24,16 @@ extension SwitcherController {
 		if state.board != nil { showBoardTiles() }
 	}
 
-	/// Beside the switcher's left edge, centred on it vertically; on its right when
-	/// there's no room on the left. A panel taller than the screen allows scrolls.
+	/// Left of the settings button (which sits left of the switcher), centred on the
+	/// switcher vertically; on the switcher's right when there's no room on the left. A
+	/// panel taller than the screen allows scrolls.
 	func settingsAnchor(in frame: CGRect) -> CGPoint {
 		let gap: CGFloat = 12
 		let screen = panel.screen ?? SwitcherPanel.screenUnderPointer()
 		let visible = screen.visibleFrame.insetBy(dx: gap, dy: gap)
 		let size = settingsPanel.prepare(maxHeight: visible.height)
 		let height = min(size.height, visible.height)
-		var x = frame.minX - gap - size.width
+		var x = (panel.gearFrame?.minX ?? frame.minX) - gap - size.width
 		if x < visible.minX { x = min(frame.maxX + gap, visible.maxX - size.width) }
 		// Centred on the switcher, kept on screen.
 		let top = min(max(frame.midY + height / 2, visible.minY + height), visible.maxY)

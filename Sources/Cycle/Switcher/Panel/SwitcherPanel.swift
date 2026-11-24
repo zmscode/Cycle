@@ -10,7 +10,7 @@ final class SwitcherPanel {
 	private unowned let controller: SwitcherController
 	private var panel: NSPanel?
 	private var host: NSHostingView<SwitcherView>?
-	/// The settings button's own little window, in the screen's top-right corner.
+	/// The settings button's own little window, just left of the switcher.
 	private var gearPanel: NSPanel?
 	/// Dims the rest of the screen behind the switcher during a session.
 	private var dimPanel: NSPanel?
@@ -135,21 +135,20 @@ final class SwitcherPanel {
 			).integral,
 			display: true
 		)
-		placeGear()
+		placeGear(beside: panel.frame)
 	}
 
-	/// Puts the settings button in the top-right corner of the switcher's screen, creating
-	/// its window on first use.
-	private func placeGear() {
+	/// Puts the settings button just left of the switcher, centred on it vertically,
+	/// creating its window on first use.
+	private func placeGear(beside switcher: CGRect) {
 		let gear = gearPanel ?? makeGearPanel()
 		gearPanel = gear
 		let size = Theme.Gear.diameter
-		let visible = Self.screenUnderPointer().visibleFrame
-		let margin = Theme.Gear.margin
 		gear.setFrame(
 			CGRect(
-				x: visible.maxX - margin - size, y: visible.maxY - margin - size, width: size,
-				height: size),
+				x: switcher.minX - Theme.Gear.gap - size, y: switcher.midY - size / 2,
+				width: size, height: size
+			).integral,
 			display: true)
 	}
 
