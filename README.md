@@ -33,6 +33,11 @@ Windows are grouped by app by default. The other layouts, picked in settings:
 
 - **Grid**: every window in rows. **List**: rows with large icons and a big preview.
 
+**Previews** in settings turns window pictures off. Cards become compact tiles with the
+app's icon, nothing is captured (Cycle's one private screen-capture call never runs), and
+Screen Recording isn't needed, so setup only asks for Accessibility. Windows on other
+Spaces without a title are left out, since their titles also need Screen Recording.
+
 Each window's controls (close, minimize, full screen, then quit) appear on it
 when it's highlighted or under the pointer. A quick ⌘Tab tap switches to the previous window
 without showing the panel, and pressing ⌘Tab rapidly never leaves the switcher stuck open.
@@ -125,7 +130,7 @@ hover it in the grid and click the pencil to edit or delete it. Presets can have
 
 **Animation.** Windows glide into place when tiled, restored or re-tiled (divider drags
 follow the pointer directly). **Animate** in settings turns it off, and the Animation slider
-sets how long it takes (0.05–0.5 s). It's off while macOS's Reduce Motion is on. An app that
+sets how long it takes (0.05–0.3 s, 0.12 s by default). It's off while macOS's Reduce Motion is on. An app that
 answers too slowly to animate smoothly snaps into place instead.
 
 **Rearranging on the board.** The board's tiles can be picked up during a session. Drop
@@ -190,7 +195,8 @@ UserDefaults.
 		"modifier": "command",
 		"panelDelay": 0.12,
 		"showWindowlessApps": false,
-		"haptics": true
+		"haptics": true,
+		"showPreviews": true
 	},
 	"tiling": {
 		"fillGaps": true,
@@ -201,7 +207,7 @@ UserDefaults.
 		"restoreLayouts": true,
 		"showDividers": true,
 		"animate": true,
-		"animationDuration": 0.2,
+		"animationDuration": 0.12,
 		"customPresets": [],
 		"workspaces": [],
 		"rightClickUndo": false,
@@ -242,7 +248,7 @@ make run
 `make release` does the same as `just release`.
 
 Cycle needs **Accessibility** (for the keyboard tap and window control) and **Screen Recording**
-(for thumbnails and titles). On launch, if either is missing, Cycle opens a setup window and
+(for thumbnails and titles; not needed with previews off). On launch, if either is missing, Cycle opens a setup window and
 takes you through them in order. It opens System Settings at the Accessibility list (Device
 Control and Data Access on macOS 27) and docks beside it. The Accessibility row holds the Cycle
 icon: drag it into the list, which adds Cycle and switches it on, as in Rex's permission flow.

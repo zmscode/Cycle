@@ -123,6 +123,13 @@ final class MenuSettings {
 		}
 	}
 
+	var showPreviews = Settings.showPreviews {
+		didSet {
+			Settings.showPreviews = showPreviews
+			onChange?()
+		}
+	}
+
 	var haptics = Settings.haptics {
 		didSet {
 			Settings.haptics = haptics
@@ -181,6 +188,7 @@ final class MenuSettings {
 		sync(\.tilingAnimationDuration, Settings.tilingAnimationDuration)
 		sync(\.tilingWorkspaces, Settings.tilingWorkspaces)
 		sync(\.haptics, Settings.haptics)
+		sync(\.showPreviews, Settings.showPreviews)
 		sync(\.tilingRightClickUndo, Settings.tilingRightClickUndo)
 		sync(\.tilingRightClickMenu, Settings.tilingRightClickMenu)
 		sync(\.tilingShowsNotes, Settings.tilingShowsNotes)

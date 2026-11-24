@@ -15,7 +15,10 @@ final class Permissions {
 	/// working after a relaunch.
 	private(set) var needsRelaunch = false
 
-	var allGranted: Bool { accessibility && screenRecording }
+	/// Screen Recording is only for previews; with them off it isn't asked for.
+	var needsScreenRecording: Bool { Settings.showPreviews }
+
+	var allGranted: Bool { accessibility && (screenRecording || !needsScreenRecording) }
 
 	/// The setup steps, in order. Accessibility comes first: without it there is no ⌘Tab.
 	enum Step: Equatable {
@@ -32,7 +35,7 @@ final class Permissions {
 	/// The first permission still missing.
 	var step: Step? {
 		if !accessibility { return .accessibility }
-		if !screenRecording { return .screenRecording }
+		if !screenRecording, needsScreenRecording { return .screenRecording }
 		return nil
 	}
 

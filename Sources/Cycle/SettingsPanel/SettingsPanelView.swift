@@ -47,6 +47,13 @@ struct SettingsPanelView: View {
 							title: "Windowless", subtitle: "Apps",
 							systemImage: "app.dashed", isOn: $settings.showWindowlessApps)
 					}
+					GridRow {
+						ToggleTile(
+							title: "Previews",
+							subtitle: settings.showPreviews ? "Window Pictures" : "Icons Only",
+							systemImage: "photo.on.rectangle", isOn: $settings.showPreviews)
+							.gridCellColumns(2)
+					}
 				}
 				TilingTile(settings: settings, currentLayout: currentLayout, onResize: onResize)
 				Grid(
@@ -94,6 +101,7 @@ struct SettingsPanelView: View {
 					settings: settings, capture: captureWorkspace, apply: applyWorkspace)
 				PermissionsTile(
 					permissions: permissions,
+					needsScreenRecording: settings.showPreviews,
 					tapIsRunning: permissions.accessibility ? tapIsRunning() : true,
 					onSetup: onSetup)
 			}

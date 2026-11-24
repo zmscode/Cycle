@@ -64,7 +64,7 @@ struct TilingTile: View {
 				step: 0.05, format: percent)
 			TilingSlider(
 				title: "Animation", value: $settings.tilingAnimationDuration,
-				range: 0.05...0.5, step: 0.05, format: seconds
+				range: 0.05...0.3, step: 0.01, format: seconds
 			)
 			.disabled(!settings.tilingAnimates || reduceMotion)
 			.opacity(settings.tilingAnimates && !reduceMotion ? 1 : 0.45)

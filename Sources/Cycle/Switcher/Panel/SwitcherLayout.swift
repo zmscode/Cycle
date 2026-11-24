@@ -121,6 +121,14 @@ struct SwitcherLayout {
 	static func previewSizes(_ windows: [SwitcherWindow], boxHeight: CGFloat) -> (
 		thumbs: [CGSize], slots: [CGFloat]
 	) {
+		// Previews off: every card is the same compact tile around the app's icon.
+		guard Settings.showPreviews else {
+			let tile = CGSize(width: Theme.Card.minSlotWidth, height: Theme.Card.iconTileHeight)
+			return (
+				Array(repeating: tile, count: windows.count),
+				Array(repeating: tile.width, count: windows.count)
+			)
+		}
 		let areas = windows.map { $0.isWindowless ? 0 : $0.bounds.width * $0.bounds.height }
 		let largest = max(areas.max() ?? 0, 1)
 		let box = CGSize(width: boxHeight * Theme.Card.boxAspect, height: boxHeight)

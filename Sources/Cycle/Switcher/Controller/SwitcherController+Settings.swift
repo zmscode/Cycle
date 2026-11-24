@@ -53,6 +53,13 @@ extension SwitcherController {
 		tiling.settingsChanged()
 		retileIfSpacingChanged()
 		guard phase == .active else { return }
+		// Previews turned on or off mid-session: capture now, or drop the pictures.
+		if Settings.showPreviews {
+			if state.images.isEmpty { captureThumbnails() }
+		} else {
+			state.images = [:]
+			state.tints = [:]
+		}
 		let recent = state.recentOrder
 		state.allWindows = Settings.layout == .grouped ? WindowGroup.groupedOrder(recent) : recent
 		let selected = state.selectedID

@@ -3,6 +3,8 @@ import SwiftUI
 /// Permission status as two compact rows, with Set Up when something is missing.
 struct PermissionsTile: View {
 	let permissions: Permissions
+	/// Previews are on: Screen Recording is needed for them.
+	let needsScreenRecording: Bool
 	let tapIsRunning: Bool
 	let onSetup: () -> Void
 
@@ -19,7 +21,14 @@ struct PermissionsTile: View {
 					}
 				}
 				PermissionStatusRow(title: "Accessibility", granted: permissions.accessibility)
-				PermissionStatusRow(title: "Screen Recording", granted: permissions.screenRecording)
+				if needsScreenRecording || permissions.screenRecording {
+					PermissionStatusRow(
+						title: "Screen Recording", granted: permissions.screenRecording)
+				} else {
+					Text("Screen Recording isn't needed with previews off.")
+						.font(.caption)
+						.foregroundStyle(.secondary)
+				}
 				if permissions.accessibility && !tapIsRunning {
 					Label(
 						"Keyboard shortcut isn't running. Relaunch Cycle.",

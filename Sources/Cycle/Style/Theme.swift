@@ -37,6 +37,8 @@ enum Theme {
 		static let maxThumbHeight: CGFloat = 150
 		static let minThumbHeight: CGFloat = 96
 		static let iconSize: CGFloat = 18
+		/// With previews off: every card's picture area, holding the app's icon.
+		static let iconTileHeight: CGFloat = 64
 		/// Concentric with the plate: its radius minus the inset.
 		static var thumbRadius: CGFloat { plateRadius - inset }
 	}

@@ -3,6 +3,7 @@ import SwiftUI
 /// Cycle's icon, the title, and how far through setup the user is.
 struct SetupHeader: View {
 	let completed: Int
+	var total = 2
 
 	var body: some View {
 		VStack(spacing: 10) {
@@ -17,7 +18,7 @@ struct SetupHeader: View {
 				.foregroundStyle(.secondary)
 				.multilineTextAlignment(.center)
 				.fixedSize(horizontal: false, vertical: true)
-			Text("\(completed) of 2 done")
+			Text("\(completed) of \(total) done")
 				.font(.callout.monospacedDigit())
 				.foregroundStyle(.tertiary)
 		}

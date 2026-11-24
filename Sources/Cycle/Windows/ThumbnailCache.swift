@@ -23,8 +23,13 @@ final class ThumbnailCache: @unchecked Sendable {
 		return queue
 	}()
 
+	/// Whether previews are on. Off, nothing is captured or handed out, so the private
+	/// capture call never runs and Screen Recording isn't needed.
+	private var isEnabled: Bool { ConfigStore.shared.config.switcher.showPreviews }
+
 	func cached(_ id: CGWindowID) -> Captured? {
-		lock.withLock { cache[id] }
+		guard isEnabled else { return nil }
+		return lock.withLock { cache[id] }
 	}
 
 	/// Captures each id that has no image newer than `maxAge`, off the main thread;
@@ -33,6 +38,7 @@ final class ThumbnailCache: @unchecked Sendable {
 		_ ids: [CGWindowID], best: Bool, maxAge: TimeInterval,
 		completion: @escaping (CGWindowID, Captured) -> Void
 	) {
+		guard isEnabled else { return }
 		let now = Date()
 		let stale = ids.filter { id in
 			guard let cached = cached(id) else { return true }

@@ -10,7 +10,7 @@ struct PermissionsView: View {
 
 	var body: some View {
 		VStack(spacing: 24) {
-			SetupHeader(completed: completedSteps)
+			SetupHeader(completed: completedSteps, total: permissions.needsScreenRecording ? 2 : 1)
 			VStack(spacing: 0) {
 				PermissionRow(
 					number: 1, symbol: "keyboard", title: "Accessibility",
@@ -18,6 +18,7 @@ struct PermissionsView: View {
 					state: state(for: .accessibility, granted: permissions.accessibility),
 					onDrag: owner.iconDrag,
 					onOpen: openAccessibility)
+				if permissions.needsScreenRecording {
 				Divider().padding(.leading, 56)
 				PermissionRow(
 					number: 2, symbol: "rectangle.dashed.badge.record", title: "Screen Recording",
@@ -25,6 +26,7 @@ struct PermissionsView: View {
 					state: state(for: .screenRecording, granted: permissions.screenRecording),
 					onDrag: owner.iconDrag,
 					onOpen: openScreenRecording)
+				}
 			}
 			.background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 16))
 			.overlay {
@@ -40,7 +42,8 @@ struct PermissionsView: View {
 	}
 
 	private var completedSteps: Int {
-		(permissions.accessibility ? 1 : 0) + (permissions.screenRecording ? 1 : 0)
+		(permissions.accessibility ? 1 : 0)
+			+ (permissions.needsScreenRecording && permissions.screenRecording ? 1 : 0)
 	}
 
 	private func state(for step: Permissions.Step, granted: Bool) -> PermissionStepState {

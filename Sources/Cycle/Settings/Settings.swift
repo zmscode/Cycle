@@ -44,6 +44,12 @@ enum Settings {
 		set { store.update { $0.switcher.panelDelay = newValue } }
 	}
 
+	/// Window previews. Off: icons instead, no captures, no Screen Recording needed.
+	static var showPreviews: Bool {
+		get { switcher.showPreviews }
+		set { store.update { $0.switcher.showPreviews = newValue } }
+	}
+
 	/// Trackpad haptics.
 	static var haptics: Bool {
 		get { switcher.haptics }
@@ -129,9 +135,9 @@ enum Settings {
 		set { store.update { $0.tiling.animate = newValue } }
 	}
 
-	/// How long windows take to glide into place, in seconds (0.05–0.5).
+	/// How long windows take to glide into place, in seconds (0.05–0.3).
 	static var tilingAnimationDuration: Double {
-		get { min(max(tiling.animationDuration, 0.05), 0.5) }
+		get { min(max(tiling.animationDuration, 0.05), 0.3) }
 		set { store.update { $0.tiling.animationDuration = newValue } }
 	}
 

@@ -27,7 +27,8 @@ struct WindowThumbnail: View {
 				Image(nsImage: icon)
 					.resizable()
 					.aspectRatio(contentMode: .fit)
-					.frame(width: min(size.height * 0.55, 84))
+					// Larger with previews off, where the icon is the whole picture.
+					.frame(width: min(size.height * (Settings.showPreviews ? 0.55 : 0.72), 84))
 					.opacity(isDimmed ? 0.55 : 1)
 					.accessibilityHidden(true)
 			}

@@ -21,7 +21,7 @@ struct TilingConfig: Codable, Equatable {
 	/// Windows glide into place rather than jumping (off when Reduce Motion is on).
 	var animate = true
 	/// How long the glide takes, in seconds.
-	var animationDuration = 0.2
+	var animationDuration = 0.12
 	/// A right-click outside the switcher undoes the last tiling change (off: right-clicks
 	/// reach the app underneath as usual).
 	var rightClickUndo = false
