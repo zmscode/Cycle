@@ -118,15 +118,23 @@ struct SwitcherLayout {
 	/// shape fits a box `boxHeight` tall and up to `Theme.Card.boxAspect` times as wide,
 	/// then shrinks by its area relative to the largest window, gently (a power curve)
 	/// and never below `Theme.Card.minScale`.
-	static func previewSizes(_ windows: [SwitcherWindow], boxHeight: CGFloat) -> (
-		thumbs: [CGSize], slots: [CGFloat]
-	) {
-		// Previews off: every card is the same compact tile around the app's icon.
+	static func previewSizes(
+		_ windows: [SwitcherWindow], boxHeight: CGFloat, style: SwitcherStyle = .grid
+	) -> (thumbs: [CGSize], slots: [CGFloat]) {
+		// Previews off: every card is the same compact size. A grid card is the app's
+		// icon over the title; a window in a group is just its title row (no picture).
 		guard Settings.showPreviews else {
-			let tile = CGSize(width: Theme.Card.minSlotWidth, height: Theme.Card.iconTileHeight)
+			let icon = Theme.Card.iconCardIcon
+			let (thumb, slot) =
+				style == .grouped
+				? (CGSize(width: Theme.Group.iconTileWidth, height: 0), Theme.Group.iconTileWidth)
+				: (
+					CGSize(width: icon, height: icon + Theme.Card.iconCardControls),
+					Theme.Card.iconCardWidth
+				)
 			return (
-				Array(repeating: tile, count: windows.count),
-				Array(repeating: tile.width, count: windows.count)
+				Array(repeating: thumb, count: windows.count),
+				Array(repeating: slot, count: windows.count)
 			)
 		}
 		let areas = windows.map { $0.isWindowless ? 0 : $0.bounds.width * $0.bounds.height }
@@ -256,8 +264,10 @@ struct SwitcherLayout {
 	}
 
 	static func groupHeight(box: CGFloat) -> CGFloat {
-		Theme.Group.padding + Theme.Group.headerHeight + Theme.Group.headerGap
-			+ Theme.Card.inset + box + Theme.Card.labelGap + Theme.Group.labelHeight
+		// No picture (previews off): no gap between it and the title either.
+		let picture = box > 0 ? box + Theme.Card.labelGap : 0
+		return Theme.Group.padding + Theme.Group.headerHeight + Theme.Group.headerGap
+			+ Theme.Card.inset + picture + Theme.Group.labelHeight
 			+ Theme.Card.inset + Theme.Group.padding
 	}
 
@@ -275,7 +285,7 @@ struct SwitcherLayout {
 	) -> SwitcherLayout {
 		let padding = Theme.Panel.padding
 		let spacing = Theme.Panel.spacing * 2
-		let (thumbs, slots) = previewSizes(windows, boxHeight: boxHeight)
+		let (thumbs, slots) = previewSizes(windows, boxHeight: boxHeight, style: .grouped)
 		let widths = groups.map { groupWidth($0, slots: slots) }
 		let rows = flow(widths, spacing: spacing, available: maxBody.width - padding * 2).map {
 			$0.map { groups[$0] }

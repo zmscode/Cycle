@@ -21,15 +21,14 @@ struct WindowCard: View {
 	private var plate: RoundedRectangle { RoundedRectangle(cornerRadius: Theme.Card.plateRadius) }
 
 	var body: some View {
-		VStack(spacing: Theme.Card.labelGap) {
-			WindowCardHeader(
-				window: window, isActive: isSelected || isHovering, isSelected: isSelected,
-				onAction: perform
-			)
-			.frame(width: slot.width, height: Theme.Card.labelHeight)
-			WindowThumbnail(window: window, image: image, size: thumbSize, isSelected: isSelected)
-				.markBadge(controller.state.markNumber(window.id))
-				.frame(width: slot.width, height: slot.height)
+		Group {
+			if Settings.showPreviews {
+				previewCard
+			} else {
+				WindowIconCard(
+					window: window, isSelected: isSelected, isActive: isSelected || isHovering,
+					markNumber: controller.state.markNumber(window.id), onAction: perform)
+			}
 		}
 		.padding([.horizontal, .top], Theme.Card.inset)
 		.padding(.bottom, Theme.Card.inset)
@@ -51,6 +50,20 @@ struct WindowCard: View {
 		.accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
 		.tilingAccessibilityActions(window.id, controller: controller)
 		.accessibilityAction(named: "Switch to Window", select)
+	}
+
+	/// The header row (controls, icon, title) over the window's preview.
+	private var previewCard: some View {
+		VStack(spacing: Theme.Card.labelGap) {
+			WindowCardHeader(
+				window: window, isActive: isSelected || isHovering, isSelected: isSelected,
+				onAction: perform
+			)
+			.frame(width: slot.width, height: Theme.Card.labelHeight)
+			WindowThumbnail(window: window, image: image, size: thumbSize, isSelected: isSelected)
+				.markBadge(controller.state.markNumber(window.id))
+				.frame(width: slot.width, height: slot.height)
+		}
 	}
 
 	private func perform(_ action: CardAction) {

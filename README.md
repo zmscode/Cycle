@@ -33,8 +33,9 @@ Windows are grouped by app by default. The other layouts, picked in settings:
 
 - **Grid**: every window in rows. **List**: rows with large icons and a big preview.
 
-**Previews** in settings turns window pictures off. Cards become compact tiles with the
-app's icon, nothing is captured (Cycle's one private screen-capture call never runs), and
+**Previews** in settings turns window pictures off. Grid cards become small tiles, the
+app's icon over the window's title, with the window controls above it on hover; in the
+grouped layout each window is a single title row. Nothing is captured (Cycle's one private screen-capture call never runs), and
 Screen Recording isn't needed, so setup only asks for Accessibility. Windows on other
 Spaces without a title are left out, since their titles also need Screen Recording.
 

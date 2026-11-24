@@ -67,6 +67,7 @@ final class ThumbnailCache: @unchecked Sendable {
 
 	/// For `Cycle --dump`: what the capture pipeline makes of one window.
 	static func inspect(_ id: CGWindowID) -> String {
+		guard ConfigStore.shared.config.switcher.showPreviews else { return "previews off" }
 		guard let raw = captureOne(id, best: false) else { return "no capture" }
 		let flat = flattened(raw)
 		let backdrop =

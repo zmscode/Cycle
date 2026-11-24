@@ -37,8 +37,12 @@ enum Theme {
 		static let maxThumbHeight: CGFloat = 150
 		static let minThumbHeight: CGFloat = 96
 		static let iconSize: CGFloat = 18
-		/// With previews off: every card's picture area, holding the app's icon.
-		static let iconTileHeight: CGFloat = 64
+		/// With previews off, a grid card is the app's icon over the window's title.
+		static let iconCardIcon: CGFloat = 56
+		static let iconCardWidth: CGFloat = 132
+		/// The controls row above the icon, kept even while the controls are hidden so
+		/// nothing moves when they appear.
+		static let iconCardControls: CGFloat = 22
 		/// Concentric with the plate: its radius minus the inset.
 		static var thumbRadius: CGFloat { plateRadius - inset }
 	}
@@ -65,6 +69,8 @@ enum Theme {
 		static let maxThumbHeight: CGFloat = 120
 		static let minThumbHeight: CGFloat = 80
 		static let minWidth: CGFloat = 200
+		/// With previews off, each window in a group is a title row this wide.
+		static let iconTileWidth: CGFloat = 224
 	}
 
 	/// The floating settings button in the screen's top-right corner.

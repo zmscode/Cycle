@@ -44,9 +44,12 @@ enum Settings {
 		set { store.update { $0.switcher.panelDelay = newValue } }
 	}
 
+	/// Debug renders force previews on or off without touching `cycle.config`.
+	nonisolated(unsafe) static var previewsOverride: Bool?
+
 	/// Window previews. Off: icons instead, no captures, no Screen Recording needed.
 	static var showPreviews: Bool {
-		get { switcher.showPreviews }
+		get { previewsOverride ?? switcher.showPreviews }
 		set { store.update { $0.switcher.showPreviews = newValue } }
 	}
 

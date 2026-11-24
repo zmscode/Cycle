@@ -139,9 +139,54 @@
 				log.append("remove 2 from \(name): " + frames.sorted { $0.key < $1.key }
 					.map { "\($0.key)=\(Int($0.value.width))" }.joined(separator: " "))
 			}
+			renderSwitchers(into: folder)
 			try? log.joined(separator: "\n").write(
 				to: folder.appending(path: "log.txt"), atomically: true, encoding: .utf8)
 			print("rendered \(log.count) frames to \(folder.path)")
+		}
+
+		/// The switcher with previews off, grid and grouped, using real apps' icons.
+		private static func renderSwitchers(into folder: URL) {
+			let apps = ["com.apple.finder", "com.apple.Safari", "com.apple.Terminal", "com.apple.Notes"]
+				.compactMap { NSRunningApplication.runningApplications(withBundleIdentifier: $0).first }
+			let running = apps.isEmpty ? [NSRunningApplication.current] : apps
+			var windows: [SwitcherWindow] = []
+			for (index, app) in running.enumerated() {
+				for n in 0..<(index == 0 ? 2 : 1) {
+					windows.append(
+						SwitcherWindow(
+							id: CGWindowID(100 + windows.count), pid: app.processIdentifier,
+							appName: app.localizedName ?? "App", bundleID: app.bundleIdentifier,
+							title: n == 0 ? "Project notes — draft" : "Downloads",
+							bounds: CGRect(x: 0, y: 0, width: 900, height: 600), axElement: nil,
+							isMinimized: index == 2, isAppHidden: false, isOnOtherSpace: false,
+							isWindowless: false))
+				}
+			}
+			Settings.previewsOverride = false
+			defer { Settings.previewsOverride = nil }
+			let controller = SwitcherController()
+			controller.state.windows = windows
+			controller.state.allWindows = windows
+			controller.state.recentOrder = windows
+			controller.state.selectedID = windows[1].id
+			controller.state.markedIDs = windows.count > 2 ? [windows[2].id] : []
+			for style in [SwitcherStyle.grid, .grouped] {
+				let ordered = style == .grouped ? WindowGroup.groupedOrder(windows) : windows
+				controller.state.windows = ordered
+				let metrics = SwitcherLayout.metrics(
+					for: ordered, style: style, maxSize: CGSize(width: 1200, height: 700),
+					showsSearchBar: false)
+				// ImageRenderer doesn't draw scroll views, so the cards are laid out directly.
+				let view = SwitcherCardsPreview(
+					state: controller.state, controller: controller, metrics: metrics
+				)
+				.frame(width: metrics.bodySize.width, height: metrics.bodySize.height)
+				.glassSheet()
+				.padding(40)
+				.background(Color(white: 0.35))
+				write(view, crop: nil, to: folder.appending(path: "h-no-previews-\(style).png"))
+			}
 		}
 
 		private static func write<V: View>(_ view: V, crop: CGRect?, to url: URL) {

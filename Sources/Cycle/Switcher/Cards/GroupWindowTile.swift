@@ -17,6 +17,8 @@ struct GroupWindowTile: View {
 	@Environment(\.accessibilityReduceMotion) private var reduceMotion
 
 	private var plate: RoundedRectangle { RoundedRectangle(cornerRadius: Theme.Card.plateRadius) }
+	/// Previews off: the tile is just its title row.
+	private var hasPicture: Bool { thumb.height > 0 }
 
 	var body: some View {
 		VStack(spacing: Theme.Card.labelGap) {
@@ -35,9 +37,12 @@ struct GroupWindowTile: View {
 				Spacer(minLength: 0)
 			}
 			.frame(width: slot.width, height: Theme.Group.labelHeight)
-			WindowThumbnail(window: window, image: image, size: thumb, isSelected: isSelected)
-				.markBadge(controller.state.markNumber(window.id))
-				.frame(width: slot.width, height: slot.height)
+			.markBadge(hasPicture ? nil : controller.state.markNumber(window.id))
+			if hasPicture {
+				WindowThumbnail(window: window, image: image, size: thumb, isSelected: isSelected)
+					.markBadge(controller.state.markNumber(window.id))
+					.frame(width: slot.width, height: slot.height)
+			}
 		}
 		.padding([.horizontal, .top], Theme.Card.inset)
 		.padding(.bottom, Theme.Card.inset)
